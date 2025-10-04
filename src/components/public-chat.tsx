@@ -2,8 +2,10 @@
 
 import { motion, useInView } from 'framer-motion'
 import { useRef, useState, useEffect } from 'react'
-import { MessageSquare, Send, User, Image as ImageIcon, X } from 'lucide-react'
+import { MessageSquare, Send, User, Image as ImageIcon, X, Globe, Wifi, WifiOff } from 'lucide-react'
 import Image from 'next/image'
+import { ChatService, FirebaseMessage } from '@/lib/chat-service'
+import { Timestamp } from 'firebase/firestore'
 
 interface Message {
   id: string
@@ -17,71 +19,54 @@ export function PublicChat() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: false, amount: 0.2 })
   
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      name: 'Usuario Demo',
-      message: '¡Hola! Este es un chat público donde puedes dejar mensajes sobre los proyectos.',
-      timestamp: new Date()
-    }
-  ])
-  
+  const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [userName, setUserName] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [isCompressing, setIsCompressing] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const [isConnected, setIsConnected] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   // Configuración de límites
-  const MAX_FILE_SIZE = 500 * 1024 // 500KB
-  const MAX_MESSAGES = 50
+  const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB para Firebase
   const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
-  // Cargar mensajes del localStorage
+  // Conectar con Firebase y escuchar mensajes en tiempo real
   useEffect(() => {
-    const savedMessages = localStorage.getItem('portfolio-messages')
-    if (savedMessages) {
-      setMessages(JSON.parse(savedMessages))
+    setIsConnected(true)
+    
+    const unsubscribe = ChatService.subscribeToMessages((firebaseMessages) => {
+      const formattedMessages: Message[] = firebaseMessages.map(msg => ({
+        id: msg.id || '',
+        name: msg.name,
+        message: msg.message,
+        image: msg.imageUrl,
+        timestamp: msg.timestamp instanceof Timestamp 
+          ? msg.timestamp.toDate() 
+          : new Date(msg.timestamp)
+      }))
+      
+      setMessages(formattedMessages)
+    })
+
+    // Cleanup function
+    return () => {
+      unsubscribe()
+      setIsConnected(false)
     }
   }, [])
 
-  // Guardar mensajes en localStorage
-  useEffect(() => {
-    localStorage.setItem('portfolio-messages', JSON.stringify(messages))
-  }, [messages])
-
-  // Función para comprimir imagen
-  const compressImage = (file: File, maxWidth = 800, quality = 0.7): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      const img = new window.Image()
-      
-      img.onload = () => {
-        // Calcular nuevas dimensiones
-        let { width, height } = img
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width
-          width = maxWidth
-        }
-        
-        canvas.width = width
-        canvas.height = height
-        
-        // Dibujar imagen comprimida
-        ctx?.drawImage(img, 0, 0, width, height)
-        
-        // Convertir a base64 con calidad reducida
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality)
-        resolve(compressedDataUrl)
-      }
-      
-      img.onerror = () => reject(new Error('Error al procesar la imagen'))
-      img.src = URL.createObjectURL(file)
-    })
+  // Función para manejar compresión usando el servicio
+  const compressImage = async (file: File): Promise<File> => {
+    try {
+      return await ChatService.compressImage(file)
+    } catch (error) {
+      throw new Error('Error al comprimir la imagen')
+    }
   }
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,35 +82,25 @@ export function PublicChat() {
     }
     
     // Validar tamaño inicial
-    if (file.size > MAX_FILE_SIZE * 2) { // Permitir archivos hasta 1MB para comprimir
-      setError('La imagen es demasiado grande. Máximo 1MB.')
+    if (file.size > MAX_FILE_SIZE) {
+      setError('La imagen es demasiado grande. Máximo 2MB.')
       return
     }
     
     try {
       setIsCompressing(true)
       
-      // Comprimir imagen
-      const compressedImage = await compressImage(file)
-      
-      // Verificar tamaño después de compresión
-      const compressedSize = Math.round((compressedImage.length * 3) / 4) // Tamaño aproximado en bytes
-      if (compressedSize > MAX_FILE_SIZE) {
-        // Si aún es muy grande, comprimir más
-        const smallerImage = await compressImage(file, 600, 0.5)
-        const smallerSize = Math.round((smallerImage.length * 3) / 4)
-        
-        if (smallerSize > MAX_FILE_SIZE) {
-          setError('No se pudo comprimir la imagen lo suficiente. Intenta con una imagen más pequeña.')
-          return
-        }
-        
-        setSelectedImage(smallerImage)
-      } else {
-        setSelectedImage(compressedImage)
+      // Comprimir imagen si es necesaria
+      let processedFile = file
+      if (file.size > 500 * 1024) { // Si es mayor a 500KB, comprimir
+        processedFile = await compressImage(file)
       }
       
-      setImageFile(file)
+      // Crear URL de vista previa
+      const previewUrl = URL.createObjectURL(processedFile)
+      setSelectedImage(previewUrl)
+      setImageFile(processedFile)
+      
     } catch (error) {
       setError('Error al procesar la imagen. Intenta con otra.')
     } finally {
@@ -141,34 +116,33 @@ export function PublicChat() {
     }
   }
 
-  const handleSubmitMessage = (e: React.FormEvent) => {
+  const handleSubmitMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setIsSending(true)
     
-    if ((newMessage.trim() || selectedImage) && userName.trim()) {
-      const message: Message = {
-        id: Date.now().toString(),
-        name: userName.trim(),
-        message: newMessage.trim(),
-        image: selectedImage || undefined,
-        timestamp: new Date()
+    try {
+      if (newMessage.trim() && userName.trim()) {
+        await ChatService.sendMessage(
+          userName.trim(),
+          newMessage.trim(),
+          undefined // Sin imágenes por ahora
+        )
+        
+        // Limpiar formulario
+        setNewMessage('')
+        setSelectedImage(null)
+        setImageFile(null)
+        setShowForm(false)
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
       }
-      
-      // Agregar mensaje y mantener solo los últimos MAX_MESSAGES
-      setMessages(prev => {
-        const updated = [...prev, message]
-        return updated.length > MAX_MESSAGES 
-          ? updated.slice(-MAX_MESSAGES) 
-          : updated
-      })
-      
-      setNewMessage('')
-      setSelectedImage(null)
-      setImageFile(null)
-      setShowForm(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
+    } catch (error) {
+      console.error('Error sending message:', error)
+      setError(error instanceof Error ? error.message : 'Error al enviar mensaje')
+    } finally {
+      setIsSending(false)
     }
   }
 
@@ -195,7 +169,7 @@ export function PublicChat() {
           </h2>
           <div className="w-20 h-1 bg-primary mx-auto"></div>
           <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
-            Deja un mensaje público sobre mis proyectos o experiencia. ¡Comparte imágenes de forma segura!
+            Chat global en tiempo real. Deja un mensaje sobre mis proyectos y todos los visitantes lo verán. ¡Comparte imágenes de forma segura!
           </p>
         </motion.div>
 
@@ -207,15 +181,33 @@ export function PublicChat() {
         >
           {/* Header del Chat */}
           <div className="bg-gradient-to-r from-primary/10 to-accent/10 p-6 border-b border-border">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-primary/20 rounded-full">
-                <MessageSquare className="text-primary" size={24} />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-primary/20 rounded-full">
+                  <MessageSquare className="text-primary" size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground flex items-center space-x-2">
+                    <span>Chat Global de Proyectos</span>
+                    <Globe className="text-primary" size={16} />
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {messages.length} mensaje{messages.length !== 1 ? 's' : ''} • En tiempo real
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">Chat de Proyectos</h3>
-                <p className="text-sm text-muted-foreground">
-                  {messages.length} mensaje{messages.length !== 1 ? 's' : ''}
-                </p>
+              <div className="flex items-center space-x-2">
+                {isConnected ? (
+                  <div className="flex items-center space-x-1 text-green-600">
+                    <Wifi size={16} />
+                    <span className="text-xs font-medium">Conectado</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-1 text-red-600">
+                    <WifiOff size={16} />
+                    <span className="text-xs font-medium">Desconectado</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -277,7 +269,7 @@ export function PublicChat() {
                 whileTap={{ scale: 0.98 }}
               >
                 <MessageSquare size={20} />
-                <span>Escribir mensaje o subir imagen</span>
+                <span>Escribir mensaje público</span>
               </motion.button>
             ) : (
               <motion.form
@@ -298,16 +290,17 @@ export function PublicChat() {
                 </div>
                 <div>
                   <textarea
-                    placeholder="Escribe tu mensaje sobre los proyectos... (opcional si subes imagen)"
+                    placeholder="Escribe tu mensaje sobre los proyectos..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     rows={3}
                     className="w-full px-4 py-2 bg-secondary/20 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors text-foreground resize-none"
+                    required
                   />
                 </div>
                 
-                {/* Selector de imagen */}
-                <div>
+                {/* Selector de imagen - TEMPORALMENTE DESHABILITADO */}
+                <div className="hidden">
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -316,7 +309,7 @@ export function PublicChat() {
                     className="hidden"
                     disabled={isCompressing}
                   />
-                  <div className="flex items-center space-x-3">
+                  <div className="hidden">
                     <motion.button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
@@ -388,12 +381,13 @@ export function PublicChat() {
                 <div className="flex space-x-3">
                   <motion.button
                     type="submit"
-                    className="flex-1 bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/80 transition-colors flex items-center justify-center space-x-2"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    disabled={isSending || isCompressing}
+                    className="flex-1 bg-primary text-primary-foreground py-2 px-4 rounded-lg font-medium hover:bg-primary/80 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    whileHover={!isSending && !isCompressing ? { scale: 1.02 } : {}}
+                    whileTap={!isSending && !isCompressing ? { scale: 0.98 } : {}}
                   >
                     <Send size={16} />
-                    <span>Enviar</span>
+                    <span>{isSending ? 'Enviando...' : 'Enviar'}</span>
                   </motion.button>
                   <motion.button
                     type="button"
@@ -416,8 +410,8 @@ export function PublicChat() {
           className="mt-6 text-center"
         >
           <div className="text-xs text-muted-foreground space-y-1">
-            <p>💡 Los mensajes se guardan localmente en tu navegador</p>
-            <p>🔒 Máximo {MAX_MESSAGES} mensajes • Imágenes hasta 500KB • Compresión automática</p>
+            <p>🌐 Los mensajes se sincronizan globalmente en tiempo real</p>
+            <p>🔒 Chat moderado • Solo mensajes de texto por ahora</p>
           </div>
         </motion.div>
       </div>
