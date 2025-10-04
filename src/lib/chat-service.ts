@@ -41,18 +41,41 @@ export class ChatService {
       limit(MAX_MESSAGES)
     )
     
-    return onSnapshot(q, (snapshot) => {
-      const messages: FirebaseMessage[] = []
-      snapshot.forEach((doc) => {
-        const data = doc.data() as Omit<FirebaseMessage, 'id'>
-        messages.push({
-          id: doc.id,
-          ...data
-        })
-      })
-      // Ordenar del más antiguo al más nuevo para mostrar
-      callback(messages.reverse())
-    })
+    return onSnapshot(
+      q, 
+      (snapshot) => {
+        try {
+          const messages: FirebaseMessage[] = []
+          snapshot.forEach((doc) => {
+            try {
+              const data = doc.data() as Omit<FirebaseMessage, 'id'>
+              
+              // Validar que el documento tenga los campos requeridos
+              if (data.name && data.message !== undefined && data.timestamp) {
+                messages.push({
+                  id: doc.id,
+                  ...data
+                })
+              }
+            } catch (docError) {
+              console.warn('Error processing document:', doc.id, docError)
+            }
+          })
+          
+          // Ordenar del más antiguo al más nuevo para mostrar
+          callback(messages.reverse())
+        } catch (snapshotError) {
+          console.error('Error processing snapshot:', snapshotError)
+          // En caso de error, enviar array vacío para no romper la UI
+          callback([])
+        }
+      },
+      (error) => {
+        console.error('Error in message subscription:', error)
+        // En caso de error de conexión, enviar array vacío
+        callback([])
+      }
+    )
   }
 
   // Subir imagen a Firebase Storage
@@ -72,13 +95,25 @@ export class ChatService {
     message: string, 
     imageFile?: File
   ): Promise<void> {
+    // Validaciones básicas antes del try
+    if (!name?.trim()) {
+      throw new Error('El nombre es requerido')
+    }
+    if (!message?.trim() && !imageFile) {
+      throw new Error('El mensaje es requerido')
+    }
+    
     try {
-      // Validaciones básicas
-      if (!name.trim()) throw new Error('El nombre es requerido')
-      if (!message.trim() && !imageFile) throw new Error('El mensaje o imagen es requerido')
+      // Limites de caracteres
+      if (name.trim().length > 50) {
+        throw new Error('El nombre es demasiado largo (máximo 50 caracteres)')
+      }
+      if (message.trim().length > 500) {
+        throw new Error('El mensaje es demasiado largo (máximo 500 caracteres)')
+      }
       
       // Filtro de palabras ofensivas básico
-      const bannedWords = ['spam', 'hack', 'phishing'] // Expandir según necesidad
+      const bannedWords = ['spam', 'hack', 'phishing', 'bot'] // Expandir según necesidad
       const hasOffensiveContent = bannedWords.some(word => 
         name.toLowerCase().includes(word) || message.toLowerCase().includes(word)
       )
@@ -92,24 +127,64 @@ export class ChatService {
       
       // Si hay imagen, subirla primero
       if (imageFile) {
-        const messageId = Date.now().toString()
-        imageUrl = await this.uploadImage(imageFile, messageId)
-        imagePath = `chat-images/${messageId}-${Date.now()}`
+        try {
+          const messageId = Date.now().toString()
+          imageUrl = await this.uploadImage(imageFile, messageId)
+          imagePath = `chat-images/${messageId}-${Date.now()}`
+        } catch (uploadError) {
+          console.error('Error uploading image:', uploadError)
+          throw new Error('Error al subir la imagen')
+        }
       }
 
-      // Guardar mensaje en Firestore
-      await addDoc(collection(db, COLLECTION_NAME), {
+      // Crear el objeto del mensaje
+      const messageData = {
         name: name.trim(),
         message: message.trim(),
-        imageUrl: imageUrl || null,
-        imagePath: imagePath || null,
         timestamp: serverTimestamp(),
-        approved: true // Por ahora auto-aprobamos, se puede cambiar para moderación
-      })
+        approved: true,
+        // Solo incluir campos de imagen si existen
+        ...(imageUrl && { imageUrl }),
+        ...(imagePath && { imagePath })
+      }
+
+      // Guardar mensaje en Firestore con retry
+      let attempts = 0
+      const maxAttempts = 3
+      
+      while (attempts < maxAttempts) {
+        try {
+          await addDoc(collection(db, COLLECTION_NAME), messageData)
+          break // Si tiene éxito, salir del loop
+        } catch (firestoreError: any) {
+          attempts++
+          console.error(`Intento ${attempts} falló:`, firestoreError)
+          
+          if (attempts === maxAttempts) {
+            // Si es el último intento, lanzar un error específico
+            if (firestoreError?.code === 'permission-denied') {
+              throw new Error('No tienes permisos para enviar mensajes')
+            } else if (firestoreError?.code === 'network-request-failed') {
+              throw new Error('Sin conexión a internet. Verifica tu conexión')
+            } else {
+              throw new Error('Error del servidor. Inténtalo de nuevo')
+            }
+          }
+          
+          // Esperar antes del siguiente intento
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts))
+        }
+      }
       
     } catch (error) {
-      console.error('Error sending message:', error)
-      throw error
+      console.error('Error in sendMessage:', error)
+      
+      // Re-lanzar el error para que lo maneje el componente
+      if (error instanceof Error) {
+        throw error
+      } else {
+        throw new Error('Error desconocido al enviar mensaje')
+      }
     }
   }
 

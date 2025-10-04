@@ -37,25 +37,46 @@ export function PublicChat() {
 
   // Conectar con Firebase y escuchar mensajes en tiempo real
   useEffect(() => {
-    setIsConnected(true)
+    let unsubscribe: (() => void) | null = null
     
-    const unsubscribe = ChatService.subscribeToMessages((firebaseMessages) => {
-      const formattedMessages: Message[] = firebaseMessages.map(msg => ({
-        id: msg.id || '',
-        name: msg.name,
-        message: msg.message,
-        image: msg.imageUrl,
-        timestamp: msg.timestamp instanceof Timestamp 
-          ? msg.timestamp.toDate() 
-          : new Date(msg.timestamp)
-      }))
+    try {
+      setIsConnected(true)
       
-      setMessages(formattedMessages)
-    })
+      unsubscribe = ChatService.subscribeToMessages((firebaseMessages) => {
+        try {
+          const formattedMessages: Message[] = firebaseMessages.map(msg => ({
+            id: msg.id || '',
+            name: msg.name,
+            message: msg.message,
+            image: msg.imageUrl,
+            timestamp: msg.timestamp instanceof Timestamp 
+              ? msg.timestamp.toDate() 
+              : new Date(msg.timestamp)
+          }))
+          
+          setMessages(formattedMessages)
+          setError(null) // Limpiar errores si la conexión funciona
+        } catch (formatError) {
+          console.error('Error formatting messages:', formatError)
+          setError('Error al cargar mensajes')
+        }
+      })
+      
+    } catch (connectionError) {
+      console.error('Error connecting to chat:', connectionError)
+      setIsConnected(false)
+      setError('Error de conexión. Recarga la página.')
+    }
 
     // Cleanup function
     return () => {
-      unsubscribe()
+      if (unsubscribe) {
+        try {
+          unsubscribe()
+        } catch (error) {
+          console.error('Error during cleanup:', error)
+        }
+      }
       setIsConnected(false)
     }
   }, [])
@@ -118,30 +139,51 @@ export function PublicChat() {
 
   const handleSubmitMessage = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validación temprana para evitar estados inconsistentes
+    if (!newMessage.trim() || !userName.trim()) {
+      setError('Por favor completa todos los campos')
+      return
+    }
+
     setError(null)
     setIsSending(true)
     
     try {
-      if (newMessage.trim() && userName.trim()) {
-        await ChatService.sendMessage(
-          userName.trim(),
-          newMessage.trim(),
-          undefined // Sin imágenes por ahora
-        )
-        
-        // Limpiar formulario
-        setNewMessage('')
-        setSelectedImage(null)
-        setImageFile(null)
-        setShowForm(false)
-        if (fileInputRef.current) {
-          fileInputRef.current.value = ''
-        }
+      // Timeout para evitar que se quede colgado indefinidamente
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout: La operación tardó demasiado')), 30000) // 30 segundos
+      })
+      
+      const sendPromise = ChatService.sendMessage(
+        userName.trim(),
+        newMessage.trim(),
+        imageFile || undefined
+      )
+      
+      // Race between send and timeout
+      await Promise.race([sendPromise, timeoutPromise])
+      
+      // Solo limpiar si el envío fue exitoso
+      setNewMessage('')
+      setSelectedImage(null)
+      setImageFile(null)
+      setShowForm(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
       }
+      
     } catch (error) {
       console.error('Error sending message:', error)
-      setError(error instanceof Error ? error.message : 'Error al enviar mensaje')
+      let errorMessage = 'Error al enviar mensaje'
+      
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
     } finally {
+      // SIEMPRE resetear el estado de envío
       setIsSending(false)
     }
   }
@@ -348,9 +390,17 @@ export function PublicChat() {
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg"
+                      className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
                     >
-                      <p className="text-sm text-red-600">⚠️ {error}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-red-600 dark:text-red-400">⚠️ {error}</p>
+                        <button
+                          onClick={() => setError(null)}
+                          className="text-red-400 hover:text-red-600 ml-2"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
                     </motion.div>
                   )}
                 </div>
@@ -399,6 +449,25 @@ export function PublicChat() {
                   </motion.button>
                 </div>
               </motion.form>
+            )}
+
+            {/* Error general fuera del formulario */}
+            {error && !showForm && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-red-600 dark:text-red-400">⚠️ {error}</p>
+                  <button
+                    onClick={() => setError(null)}
+                    className="text-red-400 hover:text-red-600 ml-2"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </motion.div>
             )}
           </div>
         </motion.div>
