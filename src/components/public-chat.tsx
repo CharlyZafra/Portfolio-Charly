@@ -122,11 +122,11 @@ export function PublicChat() {
     setIsSending(true)
     
     try {
-      if ((newMessage.trim() || imageFile) && userName.trim()) {
+      if (newMessage.trim() && userName.trim()) {
         await ChatService.sendMessage(
           userName.trim(),
           newMessage.trim(),
-          imageFile || undefined
+          undefined // Sin imágenes por ahora
         )
         
         // Limpiar formulario
@@ -269,7 +269,7 @@ export function PublicChat() {
                 whileTap={{ scale: 0.98 }}
               >
                 <MessageSquare size={20} />
-                <span>Escribir mensaje o subir imagen</span>
+                <span>Escribir mensaje público</span>
               </motion.button>
             ) : (
               <motion.form
@@ -290,16 +290,17 @@ export function PublicChat() {
                 </div>
                 <div>
                   <textarea
-                    placeholder="Escribe tu mensaje sobre los proyectos... (opcional si subes imagen)"
+                    placeholder="Escribe tu mensaje sobre los proyectos..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     rows={3}
                     className="w-full px-4 py-2 bg-secondary/20 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors text-foreground resize-none"
+                    required
                   />
                 </div>
                 
-                {/* Selector de imagen */}
-                <div>
+                {/* Selector de imagen - TEMPORALMENTE DESHABILITADO */}
+                <div className="hidden">
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -308,7 +309,7 @@ export function PublicChat() {
                     className="hidden"
                     disabled={isCompressing}
                   />
-                  <div className="flex items-center space-x-3">
+                  <div className="hidden">
                     <motion.button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
@@ -410,7 +411,7 @@ export function PublicChat() {
         >
           <div className="text-xs text-muted-foreground space-y-1">
             <p>🌐 Los mensajes se sincronizan globalmente en tiempo real</p>
-            <p>🔒 Chat moderado • Imágenes hasta 2MB • Compresión automática</p>
+            <p>🔒 Chat moderado • Solo mensajes de texto por ahora</p>
           </div>
         </motion.div>
       </div>
