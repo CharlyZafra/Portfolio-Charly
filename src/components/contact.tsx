@@ -1,295 +1,168 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { useInView } from 'framer-motion'
-import { useRef, useState } from 'react'
-import { Mail, Phone, MapPin, Send } from 'lucide-react'
+import { motion, useInView } from 'framer-motion'
+import { useRef } from 'react'
+import { Send, CheckCircle } from 'lucide-react'
+import { contactInfo } from '@/data/contact-info'
+import { useContact } from '@/hooks/use-contact'
+
+const INPUT_CLASS =
+  'w-full px-4 py-3 bg-slate-900/80 border border-slate-700/50 rounded-xl text-slate-200 placeholder-slate-600 outline-none transition-all duration-300 focus:border-indigo-500/70 focus:shadow-[0_0_14px_rgba(99,102,241,0.2)] focus:bg-slate-900'
 
 export function Contact() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: false, amount: 0.2 })
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
-  })
-  
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
-  const [error, setError] = useState('')
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
-    
-    try {
-      // Usando Web3Forms (servicio gratuito de formularios)
-      const response = await fetch('https://api.web3forms.com/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          access_key: process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY || 'your-access-key-here',
-          name: formData.name,
-          email: formData.email,
-          subject: formData.subject,
-          message: formData.message,
-          from_name: formData.name,
-          to: 'charlycastellanos333@gmail.com',
-          replyto: formData.email,
-          // Campos adicionales para mejor organización
-          website: 'Portfolio - Charly Castellanos',
-          botcheck: '', // Campo anti-spam
-        })
-      })
-      
-      const result = await response.json()
-      
-      if (response.ok && result.success) {
-        setIsSuccess(true)
-        setFormData({ name: '', email: '', subject: '', message: '' })
-        setTimeout(() => setIsSuccess(false), 5000)
-      } else {
-        throw new Error(result.message || 'Error al enviar el mensaje')
-      }
-    } catch (err) {
-      console.error('Error:', err)
-      setError('Error al enviar el mensaje. Por favor intenta de nuevo.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const { formData, isLoading, isSuccess, error, handleChange, handleSubmit } = useContact()
 
   return (
-    <section id="contact" className="py-20 bg-background" ref={ref}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="contact" ref={ref} className="relative py-28 bg-[#030712] overflow-hidden">
+      <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full bg-indigo-950/30 blur-3xl" />
+      <div className="absolute top-0 left-0 w-64 h-64 rounded-full bg-purple-950/20 blur-3xl" />
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          transition={{ duration: 0.8 }}
           className="text-center mb-16"
+          initial={{ opacity: 0, y: 30 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            Contacto
+          <span className="inline-block text-indigo-400 text-xs font-bold tracking-widest uppercase mb-3">
+            Hablemos
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-100">
+            <span className="gradient-text">Contacto</span>
           </h2>
-          <div className="w-20 h-1 bg-primary mx-auto"></div>
-          <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
-            ¿Tienes un proyecto en mente? Me encantaría escucharte y colaborar contigo
+          <div className="mt-4 mx-auto w-16 h-px bg-gradient-to-r from-indigo-500 to-cyan-500" />
+          <p className="text-slate-600 mt-4 max-w-md mx-auto text-sm">
+            ¿Tienes un proyecto en mente? Me encantaría escucharte
           </p>
         </motion.div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Información de contacto */}
+
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
+          {/* Contact info */}
           <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -50 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="space-y-8"
+            className="lg:col-span-2 space-y-4"
+            initial={{ opacity: 0, x: -40 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ delay: 0.2 }}
           >
-            <div>
-              <h3 className="text-2xl font-semibold text-foreground mb-6">
-                Información de Contacto
-              </h3>
-              <div className="space-y-6">
-                <motion.div
-                  className="flex items-center space-x-4"
-                  whileHover={{ x: 10 }}
-                  transition={{ type: 'spring', stiffness: 300 }}
-                >
-                  <div className="p-3 bg-primary/20 rounded-full">
-                    <Mail className="text-primary" size={24} />
-                  </div>
-                  <div>
-                    <p className="text-foreground font-medium">Email</p>
-                    <p className="text-muted-foreground">charlycastellanos333@gmail.com</p>
-                  </div>
-                </motion.div>
-                
-                <motion.div
-                  className="flex items-center space-x-4"
-                  whileHover={{ x: 10 }}
-                  transition={{ type: 'spring', stiffness: 300 }}
-                >
-                  <div className="p-3 bg-primary/20 rounded-full">
-                    <Phone className="text-primary" size={24} />
-                  </div>
-                  <div>
-                    <p className="text-foreground font-medium">Teléfono</p>
-                    <p className="text-muted-foreground">+504 8909-5773</p>
-                  </div>
-                </motion.div>
-                
-                <motion.div
-                  className="flex items-center space-x-4"
-                  whileHover={{ x: 10 }}
-                  transition={{ type: 'spring', stiffness: 300 }}
-                >
-                  <div className="p-3 bg-primary/20 rounded-full">
-                    <MapPin className="text-primary" size={24} />
-                  </div>
-                  <div>
-                    <p className="text-foreground font-medium">Ubicación</p>
-                    <p className="text-muted-foreground">San Pedro Sula, Honduras</p>
-                  </div>
-                </motion.div>
-              </div>
-            </div>
-            
-            <div className="p-6 bg-gradient-to-br from-primary/10 to-accent/10 rounded-lg">
-              <h4 className="text-lg font-semibold text-foreground mb-3">
-                ¿Listo para trabajar juntos?
-              </h4>
-              <p className="text-muted-foreground mb-4">
-                Estoy disponible para nuevos proyectos y oportunidades de colaboración. 
-                No dudes en contactarme.
-              </p>
-              <div className="flex space-x-4">
-                <span className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                  <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                  Disponible
-                </span>
-              </div>
-            </div>
-          </motion.div>
-          
-          {/* Formulario de contacto */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 50 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Campo hidden para Web3Forms */}
-              <input 
-                type="hidden" 
-                name="access_key" 
-                value={process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY || '7e3b7428-0e62-4c59-b832-5f9ad48a9b65'} 
-              />
-              <input type="hidden" name="subject" value="Nuevo mensaje desde Portfolio - Charly Castellanos" />
-              <input type="hidden" name="from_name" value="Portfolio Contact Form" />
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="name" className="block text-foreground font-medium mb-2">
-                    Nombre
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-secondary/20 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors text-foreground"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="email" className="block text-foreground font-medium mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-secondary/20 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors text-foreground"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label htmlFor="subject" className="block text-foreground font-medium mb-2">
-                  Asunto
-                </label>
-                <input
-                  type="text"
-                  id="subject"
-                  name="subject"
-                  value={formData.subject}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-secondary/20 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors text-foreground"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="message" className="block text-foreground font-medium mb-2">
-                  Mensaje
-                </label>
-                <textarea
-                  id="message"
-                  name="message"
-                  rows={5}
-                  value={formData.message}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-secondary/20 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors text-foreground resize-none"
-                  required
-                />
-              </div>
-              
-              <motion.button
-                type="submit"
-                disabled={isLoading}
-                className={`w-full py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${
-                  isLoading 
-                    ? 'bg-primary/50 cursor-not-allowed' 
-                    : isSuccess
-                    ? 'bg-green-500 text-white'
-                    : 'bg-primary text-primary-foreground hover:bg-primary/80'
-                }`}
-                whileHover={!isLoading ? { scale: 1.02 } : {}}
-                whileTap={!isLoading ? { scale: 0.98 } : {}}
+            {contactInfo.map(({ icon: Icon, label, value, color }, i) => (
+              <motion.div
+                key={label}
+                className="flex items-center gap-4 p-4 glass rounded-xl neon-border-primary"
+                initial={{ opacity: 0, x: -20 }}
+                animate={isInView ? { opacity: 1, x: 0 } : {}}
+                transition={{ delay: 0.3 + i * 0.1 }}
+                whileHover={{ x: 5 }}
               >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-                    <span>Enviando...</span>
-                  </>
-                ) : isSuccess ? (
-                  <>
-                    <span>✅ Mensaje Enviado</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Enviar Mensaje</span>
-                    <Send size={16} />
-                  </>
-                )}
-              </motion.button>
-              
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-red-500 text-sm mt-2"
+                <div
+                  className="p-3 rounded-xl flex-shrink-0"
+                  style={{ background: `${color}18`, border: `1px solid ${color}35` }}
                 >
-                  {error}
-                </motion.p>
-              )}
-              
-              {isSuccess && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-green-500 text-sm mt-2"
-                >
-                  ¡Gracias! Tu mensaje ha sido enviado correctamente.
-                </motion.p>
-              )}
-            </form>
+                  <Icon size={18} style={{ color }} />
+                </div>
+                <div>
+                  <p className="text-slate-600 text-xs mb-0.5">{label}</p>
+                  <p className="text-slate-300 text-sm font-medium">{value}</p>
+                </div>
+              </motion.div>
+            ))}
+
+            <motion.div
+              className="p-5 glass rounded-xl neon-border-accent"
+              initial={{ opacity: 0, y: 16 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: 0.65 }}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-emerald-400 text-sm font-medium">Disponible para proyectos</span>
+              </div>
+              <p className="text-slate-600 text-sm">Abierto a nuevas oportunidades y colaboraciones</p>
+            </motion.div>
           </motion.div>
+
+          {/* Form */}
+          <motion.form
+            onSubmit={handleSubmit}
+            className="lg:col-span-3 space-y-4 p-7 glass rounded-2xl neon-border-primary"
+            initial={{ opacity: 0, x: 40 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ delay: 0.3 }}
+          >
+            <input
+              type="hidden"
+              name="access_key"
+              value={process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY || '7e3b7428-0e62-4c59-b832-5f9ad48a9b65'}
+            />
+            {/* Honeypot — trampa para bots */}
+            <input
+              type="text"
+              name="honeypot"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              value={formData.honeypot}
+              onChange={handleChange}
+              className="absolute -left-[9999px] opacity-0 pointer-events-none"
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-slate-500 text-xs mb-1.5">Nombre</label>
+                <input type="text" name="name" value={formData.name} onChange={handleChange}
+                  placeholder="Tu nombre" className={INPUT_CLASS} required />
+              </div>
+              <div>
+                <label className="block text-slate-500 text-xs mb-1.5">Email</label>
+                <input type="email" name="email" value={formData.email} onChange={handleChange}
+                  placeholder="tu@email.com" className={INPUT_CLASS} required />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-500 text-xs mb-1.5">Asunto</label>
+              <input type="text" name="subject" value={formData.subject} onChange={handleChange}
+                placeholder="¿En qué puedo ayudarte?" className={INPUT_CLASS} required />
+            </div>
+
+            <div>
+              <label className="block text-slate-500 text-xs mb-1.5">Mensaje</label>
+              <textarea name="message" rows={5} value={formData.message} onChange={handleChange}
+                placeholder="Cuéntame sobre tu proyecto..." className={`${INPUT_CLASS} resize-none`} required />
+            </div>
+
+            <motion.button
+              type="submit"
+              disabled={isLoading}
+              className={`w-full py-3.5 px-6 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-300 ${
+                isSuccess
+                  ? 'bg-emerald-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]'
+                  : isLoading
+                  ? 'bg-indigo-700/40 text-indigo-400 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-500 text-white glow-primary'
+              }`}
+              whileHover={!isLoading ? { scale: 1.02, y: -1 } : {}}
+              whileTap={!isLoading ? { scale: 0.98 } : {}}
+            >
+              {isLoading ? (
+                <><div className="w-4 h-4 border-2 border-indigo-300 border-t-transparent rounded-full animate-spin" />Enviando...</>
+              ) : isSuccess ? (
+                <><CheckCircle size={17} />Mensaje Enviado</>
+              ) : (
+                <><Send size={16} />Enviar Mensaje</>
+              )}
+            </motion.button>
+
+            {error && (
+              <motion.p
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-red-400 text-sm text-center"
+              >
+                {error}
+              </motion.p>
+            )}
+          </motion.form>
         </div>
       </div>
     </section>

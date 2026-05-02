@@ -1,16 +1,17 @@
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  orderBy, 
-  limit, 
-  onSnapshot, 
+import {
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  limit,
+  onSnapshot,
   serverTimestamp,
   Timestamp,
   deleteDoc,
   doc,
   getDocs
 } from 'firebase/firestore'
+import { sanitizeInput, isSafe } from './sanitize'
 import { 
   ref, 
   uploadBytes, 
@@ -91,34 +92,20 @@ export class ChatService {
 
   // Enviar mensaje
   static async sendMessage(
-    name: string, 
-    message: string, 
+    name: string,
+    message: string,
     imageFile?: File
   ): Promise<void> {
-    // Validaciones básicas antes del try
-    if (!name?.trim()) {
-      throw new Error('El nombre es requerido')
-    }
-    if (!message?.trim() && !imageFile) {
-      throw new Error('El mensaje es requerido')
-    }
-    
+    if (!name?.trim()) throw new Error('El nombre es requerido')
+    if (!message?.trim() && !imageFile) throw new Error('El mensaje es requerido')
+
     try {
-      // Limites de caracteres
-      if (name.trim().length > 50) {
-        throw new Error('El nombre es demasiado largo (máximo 50 caracteres)')
-      }
-      if (message.trim().length > 500) {
-        throw new Error('El mensaje es demasiado largo (máximo 500 caracteres)')
-      }
-      
-      // Filtro de palabras ofensivas básico
-      const bannedWords = ['spam', 'hack', 'phishing', 'bot'] // Expandir según necesidad
-      const hasOffensiveContent = bannedWords.some(word => 
-        name.toLowerCase().includes(word) || message.toLowerCase().includes(word)
-      )
-      
-      if (hasOffensiveContent) {
+      // Sanitizar antes de validar longitud
+      const cleanName    = sanitizeInput(name, 50)
+      const cleanMessage = sanitizeInput(message, 500)
+
+      if (!cleanName) throw new Error('El nombre no es válido')
+      if (!isSafe(cleanName) || !isSafe(cleanMessage)) {
         throw new Error('El mensaje contiene contenido no permitido')
       }
 
@@ -137,10 +124,10 @@ export class ChatService {
         }
       }
 
-      // Crear el objeto del mensaje
+      // Crear el objeto del mensaje con valores sanitizados
       const messageData = {
-        name: name.trim(),
-        message: message.trim(),
+        name: cleanName,
+        message: cleanMessage,
         timestamp: serverTimestamp(),
         approved: true,
         // Solo incluir campos de imagen si existen

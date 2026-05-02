@@ -9,11 +9,11 @@ const config: Config = {
   theme: {
     extend: {
       screens: {
-        'xs': '320px',
-        'sm': '640px',
-        'md': '768px',
-        'lg': '1024px',
-        'xl': '1280px',
+        xs: '320px',
+        sm: '640px',
+        md: '768px',
+        lg: '1024px',
+        xl: '1280px',
         '2xl': '1536px',
         '3xl': '1920px',
       },
@@ -37,49 +37,21 @@ const config: Config = {
           foreground: 'hsl(var(--muted-foreground))',
         },
         border: 'hsl(var(--border))',
-      },
-      fontSize: {
-        'xs': ['0.75rem', { lineHeight: '1rem' }],
-        'sm': ['0.875rem', { lineHeight: '1.25rem' }],
-        'base': ['1rem', { lineHeight: '1.5rem' }],
-        'lg': ['1.125rem', { lineHeight: '1.75rem' }],
-        'xl': ['1.25rem', { lineHeight: '1.75rem' }],
-        '2xl': ['1.5rem', { lineHeight: '2rem' }],
-        '3xl': ['1.875rem', { lineHeight: '2.25rem' }],
-        '4xl': ['2.25rem', { lineHeight: '2.5rem' }],
-        '5xl': ['3rem', { lineHeight: '1' }],
-        '6xl': ['3.75rem', { lineHeight: '1' }],
-        '7xl': ['4.5rem', { lineHeight: '1' }],
-        '8xl': ['6rem', { lineHeight: '1' }],
-        '9xl': ['8rem', { lineHeight: '1' }],
-        // Tamaños fluidos para mejor zoom
-        'fluid-xs': 'clamp(0.75rem, 2vw, 0.875rem)',
-        'fluid-sm': 'clamp(0.875rem, 2.5vw, 1rem)',
-        'fluid-base': 'clamp(1rem, 3vw, 1.125rem)',
-        'fluid-lg': 'clamp(1.125rem, 3.5vw, 1.25rem)',
-        'fluid-xl': 'clamp(1.25rem, 4vw, 1.5rem)',
-        'fluid-2xl': 'clamp(1.5rem, 4.5vw, 1.875rem)',
-        'fluid-3xl': 'clamp(1.875rem, 5vw, 2.25rem)',
-        'fluid-4xl': 'clamp(2.25rem, 6vw, 3rem)',
-        'fluid-5xl': 'clamp(3rem, 7vw, 3.75rem)',
-        'fluid-6xl': 'clamp(3.75rem, 8vw, 4.5rem)',
-      },
-      spacing: {
-        'fluid-xs': 'clamp(0.25rem, 1vw, 0.5rem)',
-        'fluid-sm': 'clamp(0.5rem, 2vw, 1rem)',
-        'fluid-md': 'clamp(1rem, 3vw, 1.5rem)',
-        'fluid-lg': 'clamp(1.5rem, 4vw, 2rem)',
-        'fluid-xl': 'clamp(2rem, 5vw, 3rem)',
-        'fluid-2xl': 'clamp(3rem, 6vw, 4rem)',
-        'fluid-3xl': 'clamp(4rem, 8vw, 6rem)',
-      },
-      maxWidth: {
-        'screen-3xl': '1920px',
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
+        },
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
         'slide-up': 'slideUp 0.5s ease-out',
         'float': 'float 3s ease-in-out infinite',
+        'float-slow': 'float 5s ease-in-out infinite',
+        'spin-slow': 'spin 12s linear infinite',
+        'spin-slower': 'spin 20s linear infinite',
+        'glow-pulse': 'glowPulse 2.5s ease-in-out infinite',
+        'orbit': 'orbit 14s linear infinite',
+        'orbit-reverse': 'orbitReverse 20s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -92,12 +64,41 @@ const config: Config = {
         },
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-10px)' },
+          '50%': { transform: 'translateY(-12px)' },
         },
+        glowPulse: {
+          '0%, 100%': {
+            boxShadow: '0 0 15px rgba(99,102,241,0.3), 0 0 30px rgba(99,102,241,0.1)',
+          },
+          '50%': {
+            boxShadow: '0 0 25px rgba(99,102,241,0.6), 0 0 60px rgba(99,102,241,0.25)',
+          },
+        },
+        orbit: {
+          '0%': { transform: 'rotate(0deg) translateX(90px) rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg) translateX(90px) rotate(-360deg)' },
+        },
+        orbitReverse: {
+          '0%': { transform: 'rotate(0deg) translateX(120px) rotate(0deg)' },
+          '100%': { transform: 'rotate(-360deg) translateX(120px) rotate(360deg)' },
+        },
+      },
+      fontSize: {
+        'fluid-xs': 'clamp(0.75rem, 2vw, 0.875rem)',
+        'fluid-sm': 'clamp(0.875rem, 2.5vw, 1rem)',
+        'fluid-base': 'clamp(1rem, 3vw, 1.125rem)',
+        'fluid-lg': 'clamp(1.125rem, 3.5vw, 1.25rem)',
+        'fluid-xl': 'clamp(1.25rem, 4vw, 1.5rem)',
+        'fluid-2xl': 'clamp(1.5rem, 4.5vw, 1.875rem)',
+        'fluid-3xl': 'clamp(1.875rem, 5vw, 2.25rem)',
+        'fluid-4xl': 'clamp(2.25rem, 6vw, 3rem)',
+        'fluid-5xl': 'clamp(3rem, 7vw, 3.75rem)',
+        'fluid-6xl': 'clamp(3.75rem, 8vw, 4.5rem)',
       },
     },
   },
   plugins: [],
   darkMode: 'class',
 }
+
 export default config
