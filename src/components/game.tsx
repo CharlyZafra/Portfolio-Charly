@@ -162,26 +162,44 @@ export function MiniGame() {
           {/* Mobile controls */}
           {(playing || isBoss) && (
             <div className="flex items-center justify-between mt-5 px-2 md:hidden gap-3">
-              {/* Left */}
-              <motion.button
-                className="flex-1 h-20 rounded-2xl flex flex-col items-center justify-center gap-1 select-none touch-none"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(99,102,241,0.08))',
-                  border: '1.5px solid rgba(99,102,241,0.45)',
-                  boxShadow: '0 0 18px rgba(99,102,241,0.2)',
-                }}
-                whileTap={{ scale: 0.92, backgroundColor: 'rgba(99,102,241,0.35)' }}
-                onPointerDown={() => ml(true)}
-                onPointerUp={() => ml(false)}
-                onPointerLeave={() => ml(false)}
-              >
-                <ChevronLeft className="w-9 h-9 text-indigo-300" strokeWidth={2.5} />
-                <span className="text-indigo-400 text-[10px] font-bold tracking-widest uppercase">Izq</span>
-              </motion.button>
+              {/* Move buttons — left side */}
+              <div className="flex gap-2 flex-1">
+                <motion.button
+                  className="flex-1 h-20 rounded-2xl flex flex-col items-center justify-center gap-1 select-none touch-none"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(99,102,241,0.08))',
+                    border: '1.5px solid rgba(99,102,241,0.45)',
+                    boxShadow: '0 0 18px rgba(99,102,241,0.2)',
+                  }}
+                  whileTap={{ scale: 0.92, backgroundColor: 'rgba(99,102,241,0.35)' }}
+                  onPointerDown={() => ml(true)}
+                  onPointerUp={() => ml(false)}
+                  onPointerLeave={() => ml(false)}
+                >
+                  <ChevronLeft className="w-9 h-9 text-indigo-300" strokeWidth={2.5} />
+                  <span className="text-indigo-400 text-[10px] font-bold tracking-widest uppercase">Izq</span>
+                </motion.button>
 
-              {/* Fire */}
+                <motion.button
+                  className="flex-1 h-20 rounded-2xl flex flex-col items-center justify-center gap-1 select-none touch-none"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(99,102,241,0.08))',
+                    border: '1.5px solid rgba(99,102,241,0.45)',
+                    boxShadow: '0 0 18px rgba(99,102,241,0.2)',
+                  }}
+                  whileTap={{ scale: 0.92, backgroundColor: 'rgba(99,102,241,0.35)' }}
+                  onPointerDown={() => mr(true)}
+                  onPointerUp={() => mr(false)}
+                  onPointerLeave={() => mr(false)}
+                >
+                  <ChevronRight className="w-9 h-9 text-indigo-300" strokeWidth={2.5} />
+                  <span className="text-indigo-400 text-[10px] font-bold tracking-widest uppercase">Der</span>
+                </motion.button>
+              </div>
+
+              {/* Fire — right side */}
               <motion.button
-                className="flex-[1.4] h-20 rounded-2xl flex flex-col items-center justify-center gap-1 select-none"
+                className="w-28 h-20 rounded-2xl flex flex-col items-center justify-center gap-1 select-none"
                 style={{
                   background: 'linear-gradient(135deg, rgba(6,182,212,0.3), rgba(6,182,212,0.08))',
                   border: '1.5px solid rgba(6,182,212,0.5)',
@@ -192,23 +210,6 @@ export function MiniGame() {
               >
                 <Zap className="w-9 h-9 text-cyan-300" strokeWidth={2.5} fill="currentColor" />
                 <span className="text-cyan-400 text-[10px] font-bold tracking-widest uppercase">Fuego</span>
-              </motion.button>
-
-              {/* Right */}
-              <motion.button
-                className="flex-1 h-20 rounded-2xl flex flex-col items-center justify-center gap-1 select-none touch-none"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(99,102,241,0.08))',
-                  border: '1.5px solid rgba(99,102,241,0.45)',
-                  boxShadow: '0 0 18px rgba(99,102,241,0.2)',
-                }}
-                whileTap={{ scale: 0.92, backgroundColor: 'rgba(99,102,241,0.35)' }}
-                onPointerDown={() => mr(true)}
-                onPointerUp={() => mr(false)}
-                onPointerLeave={() => mr(false)}
-              >
-                <ChevronRight className="w-9 h-9 text-indigo-300" strokeWidth={2.5} />
-                <span className="text-indigo-400 text-[10px] font-bold tracking-widest uppercase">Der</span>
               </motion.button>
             </div>
           )}
