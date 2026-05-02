@@ -1,135 +1,142 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Menu, X, Sun, Moon } from 'lucide-react'
-import { useTheme } from 'next-themes'
-import { ClientOnly } from './client-only'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Menu, X, Code2, Gamepad2 } from 'lucide-react'
+import { navItems, gameNavItem } from '@/data/nav'
+import { useNavbar } from '@/hooks/use-navbar'
+import { useScrollProgress } from '@/hooks/use-scroll-progress'
 
 export function Navbar() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const { theme, setTheme } = useTheme()
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50)
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  const navItems = [
-    { name: 'Inicio', href: '#home' },
-    { name: 'Sobre Mí', href: '#about' },
-    { name: 'Habilidades', href: '#skills' },
-    { name: 'Chat', href: '#chat' },
-    { name: 'Contacto', href: '#contact' },
-  ]
-
-  const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    e.preventDefault()
-    const element = document.querySelector(href)
-    if (element) {
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      })
-    }
-  }
+  const { isOpen, scrolled, toggleMenu, handleSmoothScroll } = useNavbar()
+  const { activeSection } = useScrollProgress()
 
   return (
     <motion.nav
       className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        scrolled 
-          ? 'bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border-b border-white/20 dark:border-gray-700/30 shadow-lg shadow-black/5' 
-          : 'bg-white/60 dark:bg-gray-900/60 backdrop-blur-md'
+        scrolled ? 'glass-nav shadow-[0_4px_30px_rgba(99,102,241,0.08)]' : 'bg-transparent'
       }`}
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.8, ease: "easeOut" }}
+      transition={{ duration: 0.7, ease: 'easeOut' }}
     >
-      <div className="max-w-7xl mx-auto px-[clamp(1rem,4vw,2rem)]">
-        <div className="flex items-center justify-between h-[clamp(3.5rem,8vh,5rem)]">
-          <motion.div
-            className="flex-shrink-0 font-bold text-[clamp(1.125rem,3vw,1.5rem)] text-primary drop-shadow-sm"
-            whileHover={{ scale: 1.05 }}
-          >
-            Portfolio
-          </motion.div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-[clamp(0.5rem,2vw,1rem)]">
-              {navItems.map((item) => (
+          {/* Logo */}
+          <motion.a
+            href="#home"
+            onClick={(e) => handleSmoothScroll(e, '#home')}
+            className="flex items-center gap-2 font-bold text-base group"
+            whileHover={{ scale: 1.04 }}
+          >
+            <div className="p-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 group-hover:bg-indigo-600/35 transition-all">
+              <Code2 className="w-4 h-4 text-indigo-400" />
+            </div>
+            <span className="gradient-text glow-text-primary font-semibold">Charly.dev</span>
+          </motion.a>
+
+          {/* Desktop links */}
+          <div className="hidden md:flex items-center gap-1">
+            {navItems.map((item) => {
+              const isActive = activeSection === item.href.replace('#', '')
+              return (
                 <motion.a
                   key={item.name}
                   href={item.href}
                   onClick={(e) => handleSmoothScroll(e, item.href)}
-                  className="text-foreground/90 hover:text-primary px-[clamp(0.5rem,2vw,0.75rem)] py-[clamp(0.25rem,1vw,0.5rem)] rounded-lg text-[clamp(0.875rem,2.5vw,1rem)] font-medium transition-all duration-200 hover:bg-white/20 dark:hover:bg-gray-800/30 backdrop-blur-sm"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  className={`relative px-3 py-2 text-sm rounded-lg transition-colors duration-200 ${
+                    isActive
+                      ? 'text-indigo-300 bg-indigo-500/10'
+                      : 'text-slate-400 hover:text-indigo-300 hover:bg-indigo-500/8'
+                  }`}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
                 >
                   {item.name}
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-active-indicator"
+                      className="absolute bottom-0.5 left-3 right-3 h-px rounded-full bg-indigo-400"
+                      style={{ boxShadow: '0 0 6px rgba(99,102,241,0.9)' }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
                 </motion.a>
-              ))}
-              <ClientOnly fallback={<div className="w-5 h-5" />}>
-                <button
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="p-[clamp(0.375rem,1.5vw,0.5rem)] rounded-lg text-foreground/90 hover:text-primary transition-all duration-200 hover:bg-white/20 dark:hover:bg-gray-800/30 backdrop-blur-sm"
-                >
-                  {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-                </button>
-              </ClientOnly>
-            </div>
+              )
+            })}
+
+            {/* Game link */}
+            <motion.a
+              href={gameNavItem.href}
+              onClick={(e) => handleSmoothScroll(e, gameNavItem.href)}
+              className={`ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg border transition-all duration-200 ${
+                activeSection === 'game'
+                  ? 'text-cyan-300 border-cyan-400/50 bg-cyan-500/15'
+                  : 'text-cyan-400 border-cyan-500/30 bg-cyan-500/8 hover:bg-cyan-500/18 hover:border-cyan-400/50'
+              }`}
+              whileHover={{ scale: 1.05, y: -1 }}
+              whileTap={{ scale: 0.96 }}
+            >
+              <Gamepad2 className="w-3.5 h-3.5" />
+              {gameNavItem.name}
+            </motion.a>
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden flex items-center space-x-[clamp(0.25rem,1vw,0.5rem)]">
-            <ClientOnly fallback={<div className="w-5 h-5" />}>
-              <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="p-[clamp(0.375rem,1.5vw,0.5rem)] rounded-lg text-foreground/90 hover:text-primary transition-all duration-200 hover:bg-white/20 dark:hover:bg-gray-800/30 backdrop-blur-sm"
-              >
-                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-              </button>
-            </ClientOnly>
+          <div className="md:hidden">
             <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="inline-flex items-center justify-center p-[clamp(0.375rem,1.5vw,0.5rem)] rounded-lg text-foreground/90 hover:text-primary transition-all duration-200 hover:bg-white/20 dark:hover:bg-gray-800/30 backdrop-blur-sm"
+              onClick={toggleMenu}
+              className="p-2 rounded-lg text-slate-400 hover:text-indigo-300 transition-colors"
+              aria-label="Toggle menu"
             >
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
+              {isOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Navigation */}
-      {isOpen && (
-        <motion.div
-          className="md:hidden bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-white/20 dark:border-gray-700/30 shadow-lg shadow-black/5"
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-        >
-          <div className="px-[clamp(0.5rem,2vw,0.75rem)] pt-[clamp(0.5rem,2vw,0.75rem)] pb-[clamp(0.75rem,3vw,1rem)] space-y-[clamp(0.25rem,1vw,0.5rem)] sm:px-[clamp(0.75rem,3vw,1rem)] bg-white/30 dark:bg-gray-900/30 backdrop-blur-sm">
-            {navItems.map((item) => (
+      {/* Mobile menu */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="md:hidden glass-nav border-t border-indigo-500/10"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22 }}
+          >
+            <div className="px-4 py-3 space-y-1">
+              {navItems.map((item) => {
+                const isActive = activeSection === item.href.replace('#', '')
+                return (
+                  <motion.a
+                    key={item.name}
+                    href={item.href}
+                    onClick={(e) => handleSmoothScroll(e, item.href)}
+                    className={`block px-4 py-2.5 text-sm rounded-lg transition-colors ${
+                      isActive
+                        ? 'text-indigo-300 bg-indigo-500/12 border-l-2 border-indigo-400'
+                        : 'text-slate-300 hover:text-indigo-300 hover:bg-indigo-500/8'
+                    }`}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    {item.name}
+                  </motion.a>
+                )
+              })}
               <motion.a
-                key={item.name}
-                href={item.href}
-                onClick={(e) => {
-                  handleSmoothScroll(e, item.href)
-                  setIsOpen(false)
-                }}
-                className="text-foreground/90 hover:text-primary block px-[clamp(0.75rem,3vw,1rem)] py-[clamp(0.5rem,2vw,0.75rem)] rounded-lg text-[clamp(1rem,4vw,1.125rem)] font-medium transition-all duration-200 hover:bg-white/30 dark:hover:bg-gray-800/40 backdrop-blur-sm"
-                whileTap={{ scale: 0.95 }}
+                href={gameNavItem.href}
+                onClick={(e) => handleSmoothScroll(e, gameNavItem.href)}
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-cyan-400 border border-cyan-500/30 bg-cyan-500/8 rounded-lg transition-colors"
+                whileTap={{ scale: 0.97 }}
               >
-                {item.name}
+                <Gamepad2 className="w-4 h-4" />
+                {gameNavItem.name} — Distraete un rato
               </motion.a>
-            ))}
-          </div>
-        </motion.div>
-      )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.nav>
   )
 }

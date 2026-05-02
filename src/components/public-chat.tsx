@@ -1,201 +1,24 @@
 'use client'
 
 import { motion, useInView } from 'framer-motion'
-import { useRef, useState, useEffect } from 'react'
-import { MessageSquare, Send, User, Image as ImageIcon, X, Globe, Wifi, WifiOff } from 'lucide-react'
+import { useRef } from 'react'
+import { MessageSquare, Send, User, X, Globe, Wifi, WifiOff } from 'lucide-react'
 import Image from 'next/image'
-import { ChatService, FirebaseMessage } from '@/lib/chat-service'
-import { Timestamp } from 'firebase/firestore'
-
-interface Message {
-  id: string
-  name: string
-  message: string
-  image?: string
-  timestamp: Date
-}
+import { usePublicChat } from '@/hooks/use-public-chat'
 
 export function PublicChat() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: false, amount: 0.2 })
-  
-  const [messages, setMessages] = useState<Message[]>([])
-  const [newMessage, setNewMessage] = useState('')
-  const [userName, setUserName] = useState('')
-  const [showForm, setShowForm] = useState(false)
-  const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [isCompressing, setIsCompressing] = useState(false)
-  const [isSending, setIsSending] = useState(false)
-  const [isConnected, setIsConnected] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  
-  // Configuración de límites
-  const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB para Firebase
-  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-
-  // Conectar con Firebase y escuchar mensajes en tiempo real
-  useEffect(() => {
-    let unsubscribe: (() => void) | null = null
-    
-    try {
-      setIsConnected(true)
-      
-      unsubscribe = ChatService.subscribeToMessages((firebaseMessages) => {
-        try {
-          const formattedMessages: Message[] = firebaseMessages.map(msg => ({
-            id: msg.id || '',
-            name: msg.name,
-            message: msg.message,
-            image: msg.imageUrl,
-            timestamp: msg.timestamp instanceof Timestamp 
-              ? msg.timestamp.toDate() 
-              : new Date(msg.timestamp)
-          }))
-          
-          setMessages(formattedMessages)
-          setError(null) // Limpiar errores si la conexión funciona
-        } catch (formatError) {
-          console.error('Error formatting messages:', formatError)
-          setError('Error al cargar mensajes')
-        }
-      })
-      
-    } catch (connectionError) {
-      console.error('Error connecting to chat:', connectionError)
-      setIsConnected(false)
-      setError('Error de conexión. Recarga la página.')
-    }
-
-    // Cleanup function
-    return () => {
-      if (unsubscribe) {
-        try {
-          unsubscribe()
-        } catch (error) {
-          console.error('Error during cleanup:', error)
-        }
-      }
-      setIsConnected(false)
-    }
-  }, [])
-
-  // Función para manejar compresión usando el servicio
-  const compressImage = async (file: File): Promise<File> => {
-    try {
-      return await ChatService.compressImage(file)
-    } catch (error) {
-      throw new Error('Error al comprimir la imagen')
-    }
-  }
-
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    setError(null)
-    
-    if (!file) return
-    
-    // Validar tipo de archivo
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setError('Solo se permiten archivos JPG, PNG, GIF y WebP')
-      return
-    }
-    
-    // Validar tamaño inicial
-    if (file.size > MAX_FILE_SIZE) {
-      setError('La imagen es demasiado grande. Máximo 2MB.')
-      return
-    }
-    
-    try {
-      setIsCompressing(true)
-      
-      // Comprimir imagen si es necesaria
-      let processedFile = file
-      if (file.size > 500 * 1024) { // Si es mayor a 500KB, comprimir
-        processedFile = await compressImage(file)
-      }
-      
-      // Crear URL de vista previa
-      const previewUrl = URL.createObjectURL(processedFile)
-      setSelectedImage(previewUrl)
-      setImageFile(processedFile)
-      
-    } catch (error) {
-      setError('Error al procesar la imagen. Intenta con otra.')
-    } finally {
-      setIsCompressing(false)
-    }
-  }
-
-  const removeSelectedImage = () => {
-    setSelectedImage(null)
-    setImageFile(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-  }
-
-  const handleSubmitMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    // Validación temprana para evitar estados inconsistentes
-    if (!newMessage.trim() || !userName.trim()) {
-      setError('Por favor completa todos los campos')
-      return
-    }
-
-    setError(null)
-    setIsSending(true)
-    
-    try {
-      // Timeout para evitar que se quede colgado indefinidamente
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout: La operación tardó demasiado')), 30000) // 30 segundos
-      })
-      
-      const sendPromise = ChatService.sendMessage(
-        userName.trim(),
-        newMessage.trim(),
-        imageFile || undefined
-      )
-      
-      // Race between send and timeout
-      await Promise.race([sendPromise, timeoutPromise])
-      
-      // Solo limpiar si el envío fue exitoso
-      setNewMessage('')
-      setSelectedImage(null)
-      setImageFile(null)
-      setShowForm(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
-      
-    } catch (error) {
-      console.error('Error sending message:', error)
-      let errorMessage = 'Error al enviar mensaje'
-      
-      if (error instanceof Error) {
-        errorMessage = error.message
-      }
-      
-      setError(errorMessage)
-    } finally {
-      // SIEMPRE resetear el estado de envío
-      setIsSending(false)
-    }
-  }
-
-  const formatTime = (date: Date) => {
-    return new Intl.DateTimeFormat('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit',
-      day: '2-digit',
-      month: '2-digit'
-    }).format(new Date(date))
-  }
+  const {
+    messages, newMessage, setNewMessage,
+    userName, setUserName,
+    showForm, setShowForm,
+    selectedImage, isCompressing, isSending, isConnected,
+    error, setError,
+    honeypot, setHoneypot,
+    fileInputRef,
+    removeSelectedImage, handleSubmitMessage, formatTime,
+  } = usePublicChat()
 
   return (
     <section id="chat" className="py-20 bg-secondary/5" ref={ref}>
@@ -209,9 +32,9 @@ export function PublicChat() {
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
             💬 Chat Público
           </h2>
-          <div className="w-20 h-1 bg-primary mx-auto"></div>
+          <div className="w-20 h-1 bg-primary mx-auto" />
           <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
-            Chat global en tiempo real. Deja un mensaje sobre mis proyectos y todos los visitantes lo verán. ¡Comparte imágenes de forma segura!
+            Chat global en tiempo real. Deja un mensaje sobre mis proyectos y todos los visitantes lo verán.
           </p>
         </motion.div>
 
@@ -221,7 +44,7 @@ export function PublicChat() {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="bg-background rounded-2xl shadow-xl border border-border overflow-hidden"
         >
-          {/* Header del Chat */}
+          {/* Header */}
           <div className="bg-gradient-to-r from-primary/10 to-accent/10 p-6 border-b border-border">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -254,7 +77,7 @@ export function PublicChat() {
             </div>
           </div>
 
-          {/* Mensajes */}
+          {/* Messages */}
           <div className="p-6 space-y-4 max-h-96 overflow-y-auto">
             {messages.map((message, index) => (
               <motion.div
@@ -271,28 +94,17 @@ export function PublicChat() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
-                    <span className="font-medium text-foreground text-sm">
-                      {message.name}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatTime(message.timestamp)}
-                    </span>
+                    <span className="font-medium text-foreground text-sm">{message.name}</span>
+                    <span className="text-xs text-muted-foreground">{formatTime(message.timestamp)}</span>
                   </div>
                   {message.message && (
-                    <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-                      {message.message}
-                    </p>
+                    <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{message.message}</p>
                   )}
                   {message.image && (
                     <div className="mt-2 max-w-sm">
                       <div className="relative rounded-lg overflow-hidden border border-border">
-                        <Image
-                          src={message.image}
-                          alt="Imagen compartida"
-                          width={300}
-                          height={200}
-                          className="w-full h-auto object-cover"
-                        />
+                        <Image src={message.image} alt="Imagen compartida" width={300} height={200}
+                          className="w-full h-auto object-cover" />
                       </div>
                     </div>
                   )}
@@ -301,7 +113,7 @@ export function PublicChat() {
             ))}
           </div>
 
-          {/* Formulario de Nuevo Mensaje */}
+          {/* Form area */}
           <div className="p-6 border-t border-border bg-secondary/5">
             {!showForm ? (
               <motion.button
@@ -320,114 +132,58 @@ export function PublicChat() {
                 onSubmit={handleSubmitMessage}
                 className="space-y-4"
               >
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Tu nombre"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    className="w-full px-4 py-2 bg-secondary/20 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors text-foreground"
-                    required
-                  />
-                </div>
-                <div>
-                  <textarea
-                    placeholder="Escribe tu mensaje sobre los proyectos..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    rows={3}
-                    className="w-full px-4 py-2 bg-secondary/20 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors text-foreground resize-none"
-                    required
-                  />
-                </div>
-                
-                {/* Selector de imagen - TEMPORALMENTE DESHABILITADO */}
-                <div className="hidden">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                    disabled={isCompressing}
-                  />
-                  <div className="hidden">
-                    <motion.button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isCompressing}
-                      className={`flex items-center space-x-2 px-4 py-2 border border-border rounded-lg transition-colors text-foreground ${
-                        isCompressing 
-                          ? 'bg-gray-100 cursor-not-allowed opacity-50' 
-                          : 'bg-secondary/20 hover:bg-secondary/30'
-                      }`}
-                      whileHover={!isCompressing ? { scale: 1.02 } : {}}
-                      whileTap={!isCompressing ? { scale: 0.98 } : {}}
-                    >
-                      <ImageIcon size={16} />
-                      <span>{isCompressing ? 'Procesando...' : 'Subir imagen'}</span>
-                    </motion.button>
-                    {selectedImage && !isCompressing && (
-                      <span className="text-sm text-green-600">
-                        ✓ Imagen lista
-                      </span>
-                    )}
-                    {isCompressing && (
-                      <div className="flex items-center space-x-2">
-                        <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                        <span className="text-sm text-muted-foreground">Comprimiendo...</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Mostrar información sobre límites */}
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Formatos: JPG, PNG, GIF, WebP • Máximo: 500KB • Se comprime automáticamente
-                  </p>
-                  
-                  {/* Mostrar errores */}
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
-                    >
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-red-600 dark:text-red-400">⚠️ {error}</p>
-                        <button
-                          onClick={() => setError(null)}
-                          className="text-red-400 hover:text-red-600 ml-2"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </div>
+                {/* Honeypot — invisible para humanos, los bots lo rellenan */}
+                <input
+                  type="text"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                  className="absolute -left-[9999px] opacity-0 pointer-events-none"
+                />
+                <input
+                  type="text"
+                  placeholder="Tu nombre"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  className="w-full px-4 py-2 bg-secondary/20 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors text-foreground"
+                  required
+                />
+                <textarea
+                  placeholder="Escribe tu mensaje sobre los proyectos..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2 bg-secondary/20 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors text-foreground resize-none"
+                  required
+                />
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="hidden"
+                  disabled={isCompressing}
+                />
 
-                {/* Vista previa de la imagen */}
                 {selectedImage && (
                   <div className="relative">
                     <div className="relative w-full max-w-xs mx-auto">
-                      <Image
-                        src={selectedImage}
-                        alt="Vista previa"
-                        width={300}
-                        height={200}
-                        className="w-full h-32 object-cover rounded-lg border border-border"
-                      />
+                      <Image src={selectedImage} alt="Vista previa" width={300} height={200}
+                        className="w-full h-32 object-cover rounded-lg border border-border" />
                       <motion.button
                         type="button"
                         onClick={removeSelectedImage}
                         className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
+                        whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                       >
                         <X size={14} />
                       </motion.button>
                     </div>
                   </div>
                 )}
+
                 <div className="flex space-x-3">
                   <motion.button
                     type="submit"
@@ -451,7 +207,6 @@ export function PublicChat() {
               </motion.form>
             )}
 
-            {/* Error general fuera del formulario */}
             {error && !showForm && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
@@ -460,10 +215,7 @@ export function PublicChat() {
               >
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-red-600 dark:text-red-400">⚠️ {error}</p>
-                  <button
-                    onClick={() => setError(null)}
-                    className="text-red-400 hover:text-red-600 ml-2"
-                  >
+                  <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 ml-2">
                     <X size={14} />
                   </button>
                 </div>

@@ -1,189 +1,225 @@
 'use client'
 
-import { motion, useInView } from 'framer-motion'
+import { motion, useInView, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
-import { ArrowDown, Instagram, Phone, Mail } from 'lucide-react'
+import { ArrowDown, Instagram, Phone, Mail, Code2, Sparkles } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { useSmoothScroll } from '@/hooks/use-smooth-scroll'
+
+const HeroScene = dynamic(
+  () => import('@/components/3d/hero-scene').then((m) => m.HeroScene),
+  { ssr: false, loading: () => null }
+)
+
+const socials = [
+  { href: 'https://www.instagram.com/its_charlspapu/', icon: Instagram, label: 'Instagram', external: true },
+  { href: 'https://wa.me/50489095773',                 icon: Phone,     label: 'WhatsApp',  external: true },
+  { href: '#contact',                                  icon: Mail,      label: 'Email',     external: false },
+]
 
 export function Hero() {
   const ref = useRef(null)
-  const isInView = useInView(ref, { once: false, amount: 0.3 })
+  const isInView = useInView(ref, { once: false, amount: 0.2 })
+  const { handleSmoothScroll } = useSmoothScroll()
 
-  const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    e.preventDefault()
-    const element = document.querySelector(href)
-    if (element) {
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      })
-    }
-  }
+  // Parallax: background scrolls up faster than content
+  const { scrollY } = useScroll()
+  const bgY       = useTransform(scrollY, [0, 700], [0, -180])
+  const contentY  = useTransform(scrollY, [0, 700], [0, -50])
+  const opacity   = useTransform(scrollY, [0, 400], [1, 0])
 
   return (
-    <section id="home" className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20" ref={ref}>
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-12 items-center">
-          {/* Texto Principal */}
+    <section
+      id="home"
+      ref={ref}
+      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#030712]"
+    >
+      {/* 3D Canvas — parallax layer */}
+      <motion.div className="absolute inset-0 z-0" style={{ y: bgY }}>
+        <HeroScene />
+      </motion.div>
+
+      {/* Radial accent — also parallaxed */}
+      <motion.div
+        className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(99,102,241,0.12),transparent)]"
+        style={{ y: bgY }}
+      />
+
+      {/* Bottom fade */}
+      <div className="absolute inset-x-0 bottom-0 h-32 z-0 bg-gradient-to-t from-[#030712] to-transparent" />
+
+      {/* Content — slightly parallaxed + fades out on scroll */}
+      <motion.div
+        className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24"
+        style={{ y: contentY, opacity }}
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+
+          {/* Left: Text */}
           <motion.div
+            className="space-y-7 text-center lg:text-left order-2 lg:order-1"
             initial={{ opacity: 0, x: -50 }}
-            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -50 }}
-            transition={{ duration: 0.8 }}
-            className="text-center lg:text-left space-y-4 lg:space-y-6 order-2 lg:order-1"
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
           >
-            <motion.h1
-              className="text-3xl xs:text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight"
-              style={{ fontSize: 'clamp(2rem, 8vw, 4.5rem)' }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-            >
-              Hola, soy{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
-                Charly Castellanos
-              </span>
-            </motion.h1>
-            
-            <motion.p
-              className="text-base sm:text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto lg:mx-0 leading-relaxed"
-              style={{ fontSize: 'clamp(1rem, 3vw, 1.25rem)' }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-            >
-              Desarrollador Full Stack especializado en crear experiencias web modernas y funcionales
-            </motion.p>
-            
             <motion.div
-              className="flex justify-center lg:justify-start space-x-4 lg:space-x-6 mt-6 lg:mt-8"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium text-cyan-400 glass neon-border-accent"
+              initial={{ opacity: 0, y: -16 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: 0.1 }}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Tester y Desarrollador
+            </motion.div>
+
+            <motion.h1
+              className="font-extrabold leading-tight tracking-tight"
+              style={{ fontSize: 'clamp(2.5rem, 7vw, 4.5rem)' }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: 0.2, duration: 0.7 }}
+            >
+              <span className="block text-slate-100">Hola, soy</span>
+              <span className="block gradient-text glow-text-primary">Charly Castellanos</span>
+            </motion.h1>
+
+            <motion.p
+              className="text-slate-400 max-w-lg mx-auto lg:mx-0 leading-relaxed"
+              style={{ fontSize: 'clamp(1rem, 2.5vw, 1.125rem)' }}
               initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: 0.35 }}
+            >
+              Desarrollador Full Stack especializado en crear experiencias web modernas,
+              escalables y visualmente impactantes.
+            </motion.p>
+
+            <motion.div
+              className="flex items-center justify-center lg:justify-start gap-3"
+              initial={{ opacity: 0, y: 20 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: 0.5 }}
+            >
+              {socials.map(({ href, icon: Icon, label, external }) => (
+                <motion.a
+                  key={label}
+                  href={href}
+                  target={external ? '_blank' : undefined}
+                  rel={external ? 'noopener noreferrer' : undefined}
+                  onClick={!external ? (e) => handleSmoothScroll(e, href) : undefined}
+                  aria-label={label}
+                  className="group p-3 rounded-full glass neon-border-primary transition-all duration-300 hover:neon-border-accent"
+                  whileHover={{ scale: 1.15, y: -3 }}
+                  whileTap={{ scale: 0.92 }}
+                >
+                  <Icon className="w-5 h-5 text-indigo-400 group-hover:text-cyan-400 transition-colors" />
+                </motion.a>
+              ))}
+            </motion.div>
+
+            <motion.div
+              className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
+              initial={{ opacity: 0, y: 20 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: 0.62 }}
             >
               <motion.a
-                href="https://www.instagram.com/its_charlspapu/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 sm:p-3 rounded-full bg-primary text-primary-foreground hover:bg-primary/80 transition-colors"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                href="#projects"
+                onClick={(e) => handleSmoothScroll(e, '#projects')}
+                className="inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-all duration-300 glow-primary"
+                whileHover={{ scale: 1.04, y: -2 }}
+                whileTap={{ scale: 0.97 }}
               >
-                <Instagram className="w-5 h-5 sm:w-6 sm:h-6" />
-              </motion.a>
-              <motion.a
-                href="https://wa.me/50489095773"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 sm:p-3 rounded-full bg-primary text-primary-foreground hover:bg-primary/80 transition-colors"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Phone className="w-5 h-5 sm:w-6 sm:h-6" />
+                <Code2 className="w-4 h-4" />
+                Ver Proyectos
               </motion.a>
               <motion.a
                 href="#contact"
                 onClick={(e) => handleSmoothScroll(e, '#contact')}
-                className="p-2 sm:p-3 rounded-full bg-primary text-primary-foreground hover:bg-primary/80 transition-colors"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                className="inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl glass neon-border-primary text-indigo-300 hover:text-cyan-400 font-semibold transition-all duration-300"
+                whileHover={{ scale: 1.04, y: -2 }}
+                whileTap={{ scale: 0.97 }}
               >
-                <Mail className="w-5 h-5 sm:w-6 sm:h-6" />
+                Contáctame
               </motion.a>
             </motion.div>
-            
-            <motion.div
-              className="mt-6 lg:mt-8"
-              initial={{ opacity: 0 }}
-              animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-              transition={{ duration: 0.8, delay: 0.8 }}
+
+            <motion.a
+              href="#about"
+              onClick={(e) => handleSmoothScroll(e, '#about')}
+              className="inline-flex items-center gap-2 text-slate-600 hover:text-indigo-400 text-sm transition-colors"
+              animate={{ y: [0, 8, 0] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <motion.a
-                href="#about"
-                onClick={(e) => handleSmoothScroll(e, '#about')}
-                className="inline-flex items-center space-x-2 text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors"
-                animate={{ y: [0, 10, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <span>Conoce más sobre mí</span>
-                <ArrowDown className="w-4 h-4 sm:w-5 sm:h-5" />
-              </motion.a>
-            </motion.div>
+              <ArrowDown className="w-4 h-4" />
+              Conoce más sobre mí
+            </motion.a>
           </motion.div>
 
-          {/* Foto de Perfil */}
+          {/* Right: Photo */}
           <motion.div
+            className="relative flex items-center justify-center order-1 lg:order-2"
             initial={{ opacity: 0, x: 50 }}
-            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 50 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="relative flex justify-center order-1 lg:order-2"
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.8, delay: 0.25 }}
           >
-            <div className="relative">
-              {/* Fondo animado */}
+            <div className="relative flex items-center justify-center">
               <motion.div
-                className="absolute -inset-2 sm:-inset-4 bg-gradient-to-r from-primary/20 to-accent/20 rounded-full blur-xl"
-                animate={{ 
-                  scale: [1, 1.1, 1],
-                  rotate: [0, 180, 360]
-                }}
-                transition={{ 
-                  duration: 8,
-                  repeat: Infinity,
-                  ease: "linear"
-                }}
-              />
-              
-              {/* Contenedor de la imagen */}
-              <motion.div
-                className="relative w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96 rounded-full overflow-hidden border-2 sm:border-4 border-primary/20 shadow-2xl"
-                style={{ 
-                  width: 'clamp(16rem, 25vw, 24rem)',
-                  height: 'clamp(16rem, 25vw, 24rem)'
-                }}
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 300 }}
+                className="absolute rounded-full border border-indigo-500/25"
+                style={{ width: 'calc(100% + 52px)', height: 'calc(100% + 52px)' }}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
               >
-                {/* Tu foto de perfil - Reemplaza con tu imagen */}
-                <img 
-                  src="/images/Foto-Perfil.jpg" 
-                  alt="Charly Castellanos - Desarrollador Full Stack"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // Si la imagen no se encuentra, muestra el placeholder
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const placeholder = target.nextElementSibling as HTMLElement;
-                    if (placeholder) placeholder.style.display = 'flex';
-                  }}
-                />
-                
-                {/* Placeholder cuando no hay imagen */}
-                <div className="w-full h-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center" style={{ display: 'none' }}>
-                  <div className="text-6xl font-bold text-primary/60">CC</div>
-                </div>
-                
-                {/* Overlay sutil */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-indigo-500 shadow-[0_0_12px_4px_rgba(99,102,241,0.6)]" />
               </motion.div>
 
-              {/* Elementos decorativos flotantes */}
               <motion.div
-                className="absolute -top-4 -right-4 w-8 h-8 bg-primary/30 rounded-full"
-                animate={{ y: [0, -20, 0] }}
-                transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
-              />
+                className="absolute rounded-full border border-cyan-500/18"
+                style={{ width: 'calc(100% + 96px)', height: 'calc(100% + 96px)' }}
+                animate={{ rotate: -360 }}
+                transition={{ duration: 35, repeat: Infinity, ease: 'linear' }}
+              >
+                <div className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_3px_rgba(6,182,212,0.7)]" />
+              </motion.div>
+
+              <div className="absolute rounded-full bg-indigo-600/15 blur-3xl"
+                style={{ width: 'calc(100% + 80px)', height: 'calc(100% + 80px)' }} />
+
               <motion.div
-                className="absolute -bottom-6 -left-6 w-6 h-6 bg-accent/30 rounded-full"
-                animate={{ y: [0, -15, 0] }}
-                transition={{ duration: 4, repeat: Infinity, delay: 1 }}
-              />
-              <motion.div
-                className="absolute top-1/3 -left-8 w-4 h-4 bg-primary/40 rounded-full"
-                animate={{ x: [0, 10, 0] }}
-                transition={{ duration: 3.5, repeat: Infinity, delay: 0.8 }}
-              />
+                className="relative rounded-full overflow-hidden"
+                style={{
+                  width: 'clamp(13rem, 21vw, 21rem)',
+                  height: 'clamp(13rem, 21vw, 21rem)',
+                  border: '2px solid rgba(99,102,241,0.4)',
+                  boxShadow: '0 0 50px rgba(99,102,241,0.3), 0 0 100px rgba(99,102,241,0.12)',
+                }}
+                whileHover={{ scale: 1.04 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+              >
+                <img
+                  src="/images/Foto-Perfil.jpg"
+                  alt="Charly Castellanos"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const t = e.target as HTMLImageElement
+                    t.style.display = 'none'
+                    const p = t.nextElementSibling as HTMLElement
+                    if (p) p.style.display = 'flex'
+                  }}
+                />
+                <div
+                  className="w-full h-full bg-gradient-to-br from-indigo-900/80 to-purple-900/80 items-center justify-center text-6xl font-black text-indigo-300"
+                  style={{ display: 'none' }}
+                >
+                  CC
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+              </motion.div>
             </div>
           </motion.div>
+
         </div>
-      </div>
+      </motion.div>
     </section>
   )
 }

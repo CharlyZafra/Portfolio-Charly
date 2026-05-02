@@ -1,120 +1,103 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { useInView } from 'framer-motion'
+import { motion, useInView } from 'framer-motion'
 import { useRef } from 'react'
-
-const skills = [
-  { name: 'React', level: 90 },
-  { name: 'Next.js', level: 85 },
-  { name: 'TypeScript', level: 80 },
-  { name: 'React Native', level: 50 },
-  { name: 'Node.js', level: 85 },
-  { name: 'Python', level: 75 },
-  { name: 'PostgreSQL', level: 80 },
-  { name: 'MongoDB', level: 75 },
-  { name: 'Docker', level: 70 },
-  { name: 'AWS', level: 65 },
-  { name: 'Git', level: 90 }
-]
-
-const technologies = [
-  'JavaScript', 'TypeScript', 'React', 'React Native', 'Next.js', 'Node.js', 'Express', 
-  'Python', 'FastAPI', 'PostgreSQL', 'MongoDB', 'Redis', 'Docker', 
-  'AWS', 'Vercel', 'Git', 'GitHub', 'Tailwind CSS', 'Framer Motion'
-]
+import { techCategories, learning } from '@/data/skills'
 
 export function Skills() {
   const ref = useRef(null)
-  const isInView = useInView(ref, { once: false, amount: 0.2 })
+  const isInView = useInView(ref, { once: false, amount: 0.1 })
 
   return (
-    <section id="skills" className="py-20 bg-background" ref={ref}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section
+      id="skills"
+      ref={ref}
+      className="relative py-28 bg-[#030712] overflow-hidden"
+    >
+      <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-purple-950/35 blur-3xl" />
+      <div className="absolute bottom-0 left-0 w-72 h-72 rounded-full bg-cyan-950/25 blur-3xl" />
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          transition={{ duration: 0.8 }}
           className="text-center mb-16"
+          initial={{ opacity: 0, y: 30 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            Habilidades
+          <span className="inline-block text-indigo-400 text-xs font-bold tracking-widest uppercase mb-3">
+            Competencias
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-100">
+            Mis <span className="gradient-text">Habilidades</span>
           </h2>
-          <div className="w-20 h-1 bg-primary mx-auto"></div>
+          <div className="mt-4 mx-auto w-16 h-px bg-gradient-to-r from-indigo-500 to-cyan-500" />
         </motion.div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Skill Bars */}
+
+        <div className="max-w-3xl mx-auto">
           <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -50 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ delay: 0.2 }}
+            className="space-y-5"
           >
-            <h3 className="text-2xl font-semibold text-foreground mb-8">
-              Nivel de Competencia
-            </h3>
-            <div className="space-y-6">
-              {skills.map((skill, index) => (
-                <div key={skill.name} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-foreground font-medium">{skill.name}</span>
-                    <span className="text-muted-foreground">{skill.level}%</span>
-                  </div>
-                  <div className="w-full bg-secondary/20 rounded-full h-2">
-                    <motion.div
-                      className="bg-gradient-to-r from-primary to-accent h-2 rounded-full"
-                      initial={{ width: 0 }}
-                      animate={isInView ? { width: `${skill.level}%` } : { width: 0 }}
-                      transition={{ duration: 1.5, delay: isInView ? 0.3 + index * 0.1 : 0 }}
-                    />
-                  </div>
+            {techCategories.map((cat, ci) => (
+              <motion.div
+                key={cat.label}
+                initial={{ opacity: 0, y: 16 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: 0.4 + ci * 0.1 }}
+              >
+                <div className="flex items-center gap-2 mb-2.5">
+                  <span
+                    className="block w-1.5 h-1.5 rounded-full"
+                    style={{ background: cat.accent, boxShadow: `0 0 6px ${cat.accent}` }}
+                  />
+                  <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: cat.accent }}>
+                    {cat.label}
+                  </span>
                 </div>
-              ))}
-            </div>
-          </motion.div>
-          
-          {/* Technologies */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 50 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-            <h3 className="text-2xl font-semibold text-foreground mb-8">
-              Tecnologías
-            </h3>
-            <div className="flex flex-wrap gap-3">
-              {technologies.map((tech, index) => (
-                <motion.span
-                  key={tech}
-                  className="px-4 py-2 bg-secondary/20 text-foreground rounded-full text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors cursor-default"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.5, delay: 0.6 + index * 0.05 }}
-                  whileHover={{ scale: 1.05 }}
-                >
-                  {tech}
-                </motion.span>
-              ))}
-            </div>
-            
-            <div className="mt-8 p-6 bg-secondary/10 rounded-lg">
-              <h4 className="text-lg font-semibold text-foreground mb-3">
-                Actualmente Aprendiendo
-              </h4>
-              <div className="flex flex-wrap gap-3">
-                {['Three.js', 'WebGL', 'Rust', 'Kubernetes'].map((tech, index) => (
+
+                <div className="flex flex-wrap gap-2">
+                  {cat.items.map((tech, ti) => (
+                    <motion.div
+                      key={tech.name}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg glass neon-border-primary cursor-default transition-all duration-300 hover:scale-105 hover:shadow-[0_0_12px_rgba(99,102,241,0.25)]"
+                      initial={{ opacity: 0, scale: 0.85 }}
+                      animate={isInView ? { opacity: 1, scale: 1 } : {}}
+                      transition={{ delay: 0.5 + ci * 0.1 + ti * 0.04 }}
+                      whileHover={{ y: -2 }}
+                    >
+                      <tech.Icon size={15} style={{ color: tech.color, flexShrink: 0 }} />
+                      <span className="text-xs font-medium text-slate-300 whitespace-nowrap">
+                        {tech.name}
+                      </span>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+
+            <motion.div
+              className="mt-2 p-4 glass rounded-xl neon-border-accent"
+              initial={{ opacity: 0, y: 16 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: 0.9 }}
+            >
+              <p className="text-slate-500 text-xs font-bold tracking-widest uppercase mb-2.5 flex items-center gap-1.5">
+                <span className="text-cyan-400">⚡</span> Aprendiendo
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {learning.map((tech, i) => (
                   <motion.span
                     key={tech}
-                    className="px-3 py-1 bg-accent/20 text-accent-foreground rounded-full text-sm"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
-                    transition={{ duration: 0.5, delay: 1 + index * 0.1 }}
+                    className="px-2.5 py-1 rounded-lg text-xs text-cyan-400 bg-cyan-950/40 border border-cyan-500/25"
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 2.2, repeat: Infinity, delay: i * 0.55 }}
                   >
                     {tech}
                   </motion.span>
                 ))}
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         </div>
       </div>
