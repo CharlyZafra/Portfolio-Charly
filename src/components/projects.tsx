@@ -16,9 +16,9 @@ function ProjectCard({ project, index, isInView }: { project: Project; index: nu
   if (isComingSoon) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={isInView ? { opacity: 1, y: 0 } : {}}
-        transition={{ duration: 0.7, delay: index * 0.13 }}
+        initial={{ opacity: 0, scale: 0.85, rotateY: -15 }}
+        animate={isInView ? { opacity: 1, scale: 1, rotateY: 0 } : {}}
+        transition={{ duration: 0.7, delay: index * 0.13, type: 'spring', stiffness: 120 }}
         className="relative rounded-2xl overflow-hidden glass gradient-border flex flex-col items-center justify-center py-16 px-8 text-center min-h-[220px]"
       >
         <div
@@ -51,9 +51,9 @@ function ProjectCard({ project, index, isInView }: { project: Project; index: nu
   return (
     <motion.div
       ref={cardRef}
-      initial={{ opacity: 0, y: 50 }}
-      animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.7, delay: index * 0.13 }}
+      initial={{ opacity: 0, y: 60, scale: 0.92 }}
+      animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
+      transition={{ duration: 0.6, delay: index * 0.13, type: 'spring', stiffness: 100, damping: 15 }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       style={{

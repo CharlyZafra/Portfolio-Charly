@@ -19,8 +19,8 @@ export default function Home() {
         <Skills />
         <Projects />
         <PublicChat />
-        <Contact />
         <MiniGame />
+        <Contact />
       </div>
     </>
   )

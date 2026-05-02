@@ -17,14 +17,28 @@ export const SHOOT_INTERVAL = 1600
 
 export const ALIEN_COLORS = ['#a78bfa', '#34d399', '#f87171', '#fbbf24']
 
+export const BOSS_W = 90
+export const BOSS_H = 60
+export const BOSS_SPEED = 1.8
+export const BOSS_BASE_HP = 20
+
 // ── Types ──────────────────────────────────────────────────────────
 export interface Bullet   { x: number; y: number; active: boolean }
 export interface Alien    { x0: number; y0: number; alive: boolean; type: number }
 export interface Particle { x: number; y: number; vx: number; vy: number; life: number; color: string; size: number }
 export interface Star     { x: number; y: number; r: number; op: number }
 
+export interface Boss {
+  x: number; y: number
+  hp: number; maxHp: number
+  dirX: number
+  lastShootTime: number
+  phase: 'enter' | 'fight'
+  enterProgress: number
+}
+
 export interface GS {
-  phase: 'idle' | 'playing' | 'dead' | 'over'
+  phase: 'idle' | 'playing' | 'dead' | 'over' | 'boss'
   score: number; lives: number; wave: number
   deathTimer: number
   px: number; py: number
@@ -34,6 +48,7 @@ export interface GS {
   dirX: number; offX: number; offY: number
   moveTimer: number; moveInterval: number
   particles: Particle[]; stars: Star[]
+  boss: Boss | null
   keys: Set<string>
   tick: number; lastTime: number
 }
@@ -65,7 +80,20 @@ export function newGame(): GS {
     aliens: makeAliens(),
     dirX: 1, offX: 0, offY: 0, moveTimer: 0, moveInterval: 600,
     particles: [], stars: makeStars(),
+    boss: null,
     keys: new Set(), tick: 0, lastTime: 0,
+  }
+}
+
+export function makeBoss(wave: number): Boss {
+  return {
+    x: CW / 2, y: -BOSS_H,
+    hp: BOSS_BASE_HP + wave * 8,
+    maxHp: BOSS_BASE_HP + wave * 8,
+    dirX: 1,
+    lastShootTime: 0,
+    phase: 'enter',
+    enterProgress: 0,
   }
 }
 
@@ -199,5 +227,70 @@ export function drawBullet(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.fillStyle = '#f87171'; ctx.shadowColor = '#f87171'; ctx.shadowBlur = 12
     ctx.beginPath(); ctx.roundRect(x - 2, y, 4, 13, 2); ctx.fill()
   }
+  ctx.restore()
+}
+
+// ── Draw: Boss ─────────────────────────────────────────────────────
+export function drawBoss(ctx: CanvasRenderingContext2D, boss: Boss, tick: number) {
+  const { x, y } = boss
+  const pulse = Math.sin(tick * 0.08) * 0.12 + 1
+  const hpRatio = boss.hp / boss.maxHp
+  const bossColor = hpRatio > 0.5 ? '#f87171' : '#ff2020'
+
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.scale(pulse, pulse)
+
+  // Glow
+  ctx.shadowColor = bossColor; ctx.shadowBlur = 30
+
+  // Body — large rounded rect
+  ctx.fillStyle = '#1e0a2e'
+  ctx.beginPath(); ctx.roundRect(-BOSS_W / 2, -BOSS_H / 2, BOSS_W, BOSS_H, 10); ctx.fill()
+  ctx.strokeStyle = bossColor; ctx.lineWidth = 2.5
+  ctx.beginPath(); ctx.roundRect(-BOSS_W / 2, -BOSS_H / 2, BOSS_W, BOSS_H, 10); ctx.stroke()
+
+  // Cannons
+  ctx.fillStyle = bossColor
+  ;[-30, 0, 30].forEach(ox => {
+    ctx.beginPath(); ctx.roundRect(ox - 5, BOSS_H / 2 - 4, 10, 18, 3); ctx.fill()
+  })
+
+  // Eyes
+  ctx.fillStyle = '#ffffff'; ctx.shadowBlur = 14
+  ;[-18, 18].forEach(ox => {
+    ctx.beginPath(); ctx.ellipse(ox, -4, 10, 13, 0, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = bossColor
+    const pupilX = ox + Math.sin(tick * 0.05) * 3
+    ctx.beginPath(); ctx.ellipse(pupilX, -4, 5, 7, 0, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = '#ffffff'
+  })
+
+  // Wings
+  ctx.fillStyle = '#3b0764'; ctx.strokeStyle = bossColor; ctx.lineWidth = 1.5
+  ;[[-1, -1], [1, 1]].forEach(([sx]) => {
+    ctx.save(); ctx.scale(sx, 1)
+    ctx.beginPath()
+    ctx.moveTo(BOSS_W / 2, -BOSS_H * 0.1)
+    ctx.lineTo(BOSS_W / 2 + 30, -BOSS_H * 0.4)
+    ctx.lineTo(BOSS_W / 2 + 36, BOSS_H * 0.2)
+    ctx.lineTo(BOSS_W / 2, BOSS_H * 0.3)
+    ctx.closePath(); ctx.fill(); ctx.stroke()
+    ctx.restore()
+  })
+
+  ctx.restore()
+
+  // HP bar
+  const barW = BOSS_W + 20
+  const barX = x - barW / 2
+  const barY = y - BOSS_H / 2 - 16
+  ctx.save()
+  ctx.fillStyle = '#1e293b'
+  ctx.beginPath(); ctx.roundRect(barX, barY, barW, 8, 4); ctx.fill()
+  const fillColor = hpRatio > 0.5 ? '#22c55e' : hpRatio > 0.25 ? '#f59e0b' : '#ef4444'
+  ctx.fillStyle = fillColor
+  ctx.shadowColor = fillColor; ctx.shadowBlur = 8
+  ctx.beginPath(); ctx.roundRect(barX, barY, barW * hpRatio, 8, 4); ctx.fill()
   ctx.restore()
 }
