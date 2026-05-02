@@ -13,7 +13,7 @@
     "NEXT_PUBLIC_FIREBASE_APP_ID": "@firebase_app_id"
   },
   "functions": {
-    "app/**": {
+    "src/app/api/**": {
       "maxDuration": 10
     }
   },
