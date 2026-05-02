@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Gamepad2, RotateCcw } from 'lucide-react'
+import { Gamepad2, RotateCcw, ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 import { CW, CH } from '@/lib/game-engine'
 import { useGame } from '@/hooks/use-game'
 
@@ -161,26 +161,55 @@ export function MiniGame() {
 
           {/* Mobile controls */}
           {(playing || isBoss) && (
-            <div className="flex items-center justify-between mt-4 px-1 md:hidden">
-              <div className="flex gap-3">
-                {[['◀', ml], ['▶', mr]].map(([label, handler]) => (
-                  <button
-                    key={label as string}
-                    className="w-16 h-14 rounded-xl glass neon-border-primary text-slate-200 text-2xl active:bg-indigo-500/25 select-none touch-none"
-                    onPointerDown={() => (handler as (b: boolean) => void)(true)}
-                    onPointerUp={() => (handler as (b: boolean) => void)(false)}
-                    onPointerLeave={() => (handler as (b: boolean) => void)(false)}
-                  >
-                    {label as string}
-                  </button>
-                ))}
-              </div>
-              <button
-                className="w-24 h-14 rounded-xl bg-cyan-600/25 border border-cyan-500/40 text-cyan-400 text-sm font-bold active:bg-cyan-500/35 select-none"
+            <div className="flex items-center justify-between mt-5 px-2 md:hidden gap-3">
+              {/* Left */}
+              <motion.button
+                className="flex-1 h-20 rounded-2xl flex flex-col items-center justify-center gap-1 select-none touch-none"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(99,102,241,0.08))',
+                  border: '1.5px solid rgba(99,102,241,0.45)',
+                  boxShadow: '0 0 18px rgba(99,102,241,0.2)',
+                }}
+                whileTap={{ scale: 0.92, backgroundColor: 'rgba(99,102,241,0.35)' }}
+                onPointerDown={() => ml(true)}
+                onPointerUp={() => ml(false)}
+                onPointerLeave={() => ml(false)}
+              >
+                <ChevronLeft className="w-9 h-9 text-indigo-300" strokeWidth={2.5} />
+                <span className="text-indigo-400 text-[10px] font-bold tracking-widest uppercase">Izq</span>
+              </motion.button>
+
+              {/* Fire */}
+              <motion.button
+                className="flex-[1.4] h-20 rounded-2xl flex flex-col items-center justify-center gap-1 select-none"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(6,182,212,0.3), rgba(6,182,212,0.08))',
+                  border: '1.5px solid rgba(6,182,212,0.5)',
+                  boxShadow: '0 0 24px rgba(6,182,212,0.25)',
+                }}
+                whileTap={{ scale: 0.93, backgroundColor: 'rgba(6,182,212,0.4)' }}
                 onPointerDown={ms}
               >
-                DISPARO
-              </button>
+                <Zap className="w-9 h-9 text-cyan-300" strokeWidth={2.5} fill="currentColor" />
+                <span className="text-cyan-400 text-[10px] font-bold tracking-widest uppercase">Fuego</span>
+              </motion.button>
+
+              {/* Right */}
+              <motion.button
+                className="flex-1 h-20 rounded-2xl flex flex-col items-center justify-center gap-1 select-none touch-none"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(99,102,241,0.08))',
+                  border: '1.5px solid rgba(99,102,241,0.45)',
+                  boxShadow: '0 0 18px rgba(99,102,241,0.2)',
+                }}
+                whileTap={{ scale: 0.92, backgroundColor: 'rgba(99,102,241,0.35)' }}
+                onPointerDown={() => mr(true)}
+                onPointerUp={() => mr(false)}
+                onPointerLeave={() => mr(false)}
+              >
+                <ChevronRight className="w-9 h-9 text-indigo-300" strokeWidth={2.5} />
+                <span className="text-indigo-400 text-[10px] font-bold tracking-widest uppercase">Der</span>
+              </motion.button>
             </div>
           )}
 
