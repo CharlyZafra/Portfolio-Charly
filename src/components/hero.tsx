@@ -12,7 +12,7 @@ const HeroScene = dynamic(
 )
 
 const socials = [
-  { href: 'https://www.instagram.com/its_charlspapu/', icon: Instagram, label: 'Instagram', external: true },
+  { href: 'https://www.instagram.com/its_charlsdev', icon: Instagram, label: 'Instagram', external: true },
   { href: 'https://wa.me/50489095773',                 icon: Phone,     label: 'WhatsApp',  external: true },
   { href: '#contact',                                  icon: Mail,      label: 'Email',     external: false },
 ]
