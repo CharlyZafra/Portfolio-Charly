@@ -15,6 +15,6 @@ export const stack = [
   {
     title: 'Backend',
     dot: 'bg-cyan-500',
-    items: ['Node.js / Express', 'PostgreSQL / MongoDB', 'API REST / GraphQL', 'Docker / AWS'],
+    items: ['Node.js / NestJS', 'PostgreSQL / MongoDB', 'API REST / GraphQL', 'Docker / AWS'],
   },
 ]

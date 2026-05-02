@@ -1,7 +1,7 @@
 import {
   SiJavascript, SiTypescript, SiPython,
   SiReact, SiNextdotjs, SiTailwindcss,
-  SiNodedotjs, SiExpress, SiFastapi,
+  SiNodedotjs, SiExpress, SiFastapi, SiNestjs,
   SiPostgresql, SiMongodb, SiRedis,
   SiDocker, SiVercel, SiGit, SiGithub,
   SiFramer,
@@ -47,6 +47,7 @@ export const techCategories: TechCategory[] = [
     accent: '#10b981',
     items: [
       { name: 'Node.js', Icon: SiNodedotjs, color: '#68A063' },
+      { name: 'NestJS',  Icon: SiNestjs,   color: '#E0234E' },
       { name: 'Express', Icon: SiExpress,   color: '#aaaaaa' },
       { name: 'FastAPI', Icon: SiFastapi,   color: '#009688' },
     ],

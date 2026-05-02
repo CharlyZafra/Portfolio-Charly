@@ -7,6 +7,7 @@ import { useGame } from '@/hooks/use-game'
 
 export function MiniGame() {
   const { canvasRef, ui, startGame, playing, ml, mr, ms } = useGame()
+  const isBoss = ui.phase === 'boss'
 
   return (
     <section id="game" className="relative py-28 bg-[#060b19] overflow-hidden">
@@ -82,6 +83,7 @@ export function MiniGame() {
                       <li>Destruye todos los extraterrestres</li>
                       <li>Sobrevive <span className="text-slate-200 font-semibold">3 vidas</span> (♥♥♥)</li>
                       <li>Cada ola se vuelve <span className="text-red-400 font-semibold">más rápida</span></li>
+                      <li>Al terminar cada ola aparece un <span className="text-red-400 font-semibold">BOSS</span></li>
                       <li>Si llegan a ti, <span className="text-red-400 font-semibold">Game Over</span></li>
                     </ul>
                   </div>
@@ -117,7 +119,7 @@ export function MiniGame() {
               </div>
             )}
 
-            {/* GAME OVER overlay */}
+          {/* GAME OVER overlay */}
             {ui.phase === 'over' && (
               <div className="absolute inset-0 bg-[#030712]/92 flex flex-col items-center justify-center gap-5 text-center">
                 <p className="text-5xl font-black tracking-widest"
@@ -137,10 +139,28 @@ export function MiniGame() {
                 </motion.button>
               </div>
             )}
+
+            {/* BOSS entry flash banner */}
+            {isBoss && ui.bossMaxHp > 0 && (
+              <motion.div
+                key={`boss-banner-${ui.wave}`}
+                initial={{ opacity: 0, scale: 1.4 }}
+                animate={{ opacity: [0, 1, 1, 0], scale: [1.4, 1, 1, 0.8] }}
+                transition={{ duration: 2.2, times: [0, 0.2, 0.7, 1] }}
+                className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+                style={{ background: 'rgba(3,7,18,0.6)' }}
+              >
+                <p className="text-6xl font-black tracking-[0.2em]"
+                   style={{ color: '#f87171', textShadow: '0 0 40px rgba(248,113,113,0.9)', lineHeight: 1 }}>
+                  BOSS
+                </p>
+                <p className="text-cyan-400 text-lg font-bold mt-2 tracking-widest">¡DESTRÚYELO!</p>
+              </motion.div>
+            )}
           </div>
 
           {/* Mobile controls */}
-          {playing && (
+          {(playing || isBoss) && (
             <div className="flex items-center justify-between mt-4 px-1 md:hidden">
               <div className="flex gap-3">
                 {[['◀', ml], ['▶', mr]].map(([label, handler]) => (
@@ -164,7 +184,7 @@ export function MiniGame() {
             </div>
           )}
 
-          {playing && (
+          {(playing || isBoss) && (
             <p className="hidden md:block text-center text-slate-700 text-xs mt-3">
               ← → mover &nbsp;|&nbsp; SPACE disparar
             </p>

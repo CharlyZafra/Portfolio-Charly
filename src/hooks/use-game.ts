@@ -2,21 +2,29 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react'
 import {
-  GS, newGame, makeAliens, explode,
+  GS, newGame, makeAliens, makeBoss, explode,
   CW, CH, PLAYER_W, PLAYER_H, PLAYER_SPEED,
   BULLET_SPEED, ALIEN_BULLET_SPEED,
   ROWS, COLS, A_W, A_H, SHOOT_INTERVAL, ALIEN_COLORS,
-  drawShip, drawAlien, drawBullet,
+  BOSS_W, BOSS_H, BOSS_SPEED,
+  drawShip, drawAlien, drawBullet, drawBoss,
 } from '@/lib/game-engine'
 
 export function useGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const gsRef     = useRef<GS>(newGame())
   const rafRef    = useRef<number | null>(null)
-  const [ui, setUi] = useState({ phase: 'idle', score: 0, lives: 3, wave: 1 })
+  const [ui, setUi] = useState({ phase: 'idle', score: 0, lives: 3, wave: 1, bossHp: 0, bossMaxHp: 0 })
 
   const sync = useCallback((gs: GS) =>
-    setUi({ phase: gs.phase, score: gs.score, lives: gs.lives, wave: gs.wave }), [])
+    setUi({
+      phase: gs.phase,
+      score: gs.score,
+      lives: gs.lives,
+      wave: gs.wave,
+      bossHp: gs.boss?.hp ?? 0,
+      bossMaxHp: gs.boss?.maxHp ?? 0,
+    }), [])
 
   const loop = useCallback((now: number) => {
     const gs = gsRef.current
@@ -92,13 +100,99 @@ export function useGame() {
       }
 
       if (gs.aliens.every(a => !a.alive)) {
-        gs.wave++; gs.aliens = makeAliens()
-        gs.offX = 0; gs.offY = 0; gs.dirX = 1
-        gs.moveInterval = Math.max(100, 600 - gs.wave * 45)
+        // Start boss fight instead of next wave immediately
+        gs.phase = 'boss'
+        gs.boss = makeBoss(gs.wave)
         gs.bullets = []; gs.alienBullets = []
         sync(gs)
       }
 
+      gs.bullets      = gs.bullets.filter(b => b.active)
+      gs.alienBullets = gs.alienBullets.filter(b => b.active)
+    }
+
+    // ── Boss phase ────────────────────────────────────────────────
+    if (gs.phase === 'boss' && gs.boss) {
+      const boss = gs.boss
+      const bossShootInterval = Math.max(600, 1800 - gs.wave * 80)
+
+      // Entry animation — slide down from top
+      if (boss.phase === 'enter') {
+        boss.enterProgress = Math.min(1, boss.enterProgress + 0.018)
+        boss.y = -BOSS_H + (BOSS_H + 80) * boss.enterProgress
+        if (boss.enterProgress >= 1) { boss.phase = 'fight'; boss.y = 80 }
+      }
+
+      if (boss.phase === 'fight') {
+        // Move horizontally
+        boss.x += boss.dirX * BOSS_SPEED
+        if (boss.x > CW - BOSS_W / 2 - 10) { boss.dirX = -1; boss.x = CW - BOSS_W / 2 - 10 }
+        if (boss.x < BOSS_W / 2 + 10)       { boss.dirX =  1; boss.x = BOSS_W / 2 + 10 }
+
+        // Boss shoots — spread pattern (3 bullets)
+        if (now - boss.lastShootTime > bossShootInterval) {
+          boss.lastShootTime = now
+          ;[-28, 0, 28].forEach(ox => {
+            gs.alienBullets.push({ x: boss.x + ox, y: boss.y + BOSS_H / 2 + 8, active: true })
+          })
+        }
+      }
+
+      // Player bullets hit boss
+      gs.bullets.forEach(b => {
+        if (!b.active || !gs.boss) return
+        const bx = gs.boss.x, by = gs.boss.y
+        if (b.x > bx - BOSS_W / 2 && b.x < bx + BOSS_W / 2 &&
+            b.y > by - BOSS_H / 2 && b.y < by + BOSS_H / 2) {
+          b.active = false
+          gs.boss.hp--
+          explode(gs.particles, b.x, by, '#f87171')
+          sync(gs)
+
+          if (gs.boss.hp <= 0) {
+            // Boss defeated — big explosion, next wave
+            for (let i = 0; i < 6; i++) {
+              const ox = (Math.random() - 0.5) * BOSS_W
+              const oy = (Math.random() - 0.5) * BOSS_H
+              explode(gs.particles, bx + ox, by + oy, ['#f87171', '#fbbf24', '#a78bfa', '#22d3ee'][i % 4])
+            }
+            gs.score += 200 + gs.wave * 50
+            gs.boss = null
+            gs.wave++
+            gs.aliens = makeAliens()
+            gs.offX = 0; gs.offY = 0; gs.dirX = 1
+            gs.moveInterval = Math.max(100, 600 - gs.wave * 45)
+            gs.bullets = []; gs.alienBullets = []
+            gs.phase = 'playing'
+            sync(gs)
+          }
+        }
+      })
+
+      // Boss bullets hit player
+      gs.alienBullets.forEach(b => {
+        if (!b.active) return
+        b.y += ALIEN_BULLET_SPEED * 1.4
+        if (b.y > CH) { b.active = false; return }
+        if (Math.abs(b.x - gs.px) < PLAYER_W / 2 && Math.abs(b.y - gs.py) < PLAYER_H / 2) {
+          b.active = false; gs.lives--
+          explode(gs.particles, gs.px, gs.py - PLAYER_H / 2, '#6366f1')
+          if (gs.lives <= 0) { gs.boss = null; gs.phase = 'over'; sync(gs); return }
+          gs.phase = 'boss'; gs.deathTimer = 70
+          sync(gs)
+        }
+      })
+
+      // Player move during boss
+      if (gs.keys.has('ArrowLeft')  || gs.keys.has('a')) gs.px = Math.max(PLAYER_W / 2 + 4, gs.px - PLAYER_SPEED)
+      if (gs.keys.has('ArrowRight') || gs.keys.has('d')) gs.px = Math.min(CW - PLAYER_W / 2 - 4, gs.px + PLAYER_SPEED)
+
+      if (gs.keys.has(' ') && now - gs.lastBulletTime > 280) {
+        gs.bullets.push({ x: gs.px, y: gs.py - PLAYER_H, active: true })
+        gs.lastBulletTime = now
+      }
+
+      gs.bullets.forEach(b => { if (b.active) { b.y -= BULLET_SPEED; if (b.y < 0) b.active = false } })
       gs.bullets      = gs.bullets.filter(b => b.active)
       gs.alienBullets = gs.alienBullets.filter(b => b.active)
     }
@@ -119,6 +213,8 @@ export function useGame() {
     gs.bullets.forEach(b => drawBullet(ctx, b.x, b.y, true))
     gs.alienBullets.forEach(b => drawBullet(ctx, b.x, b.y, false))
 
+    if (gs.boss) drawBoss(ctx, gs.boss, gs.tick)
+
     if (gs.phase !== 'dead' || Math.floor(gs.tick / 5) % 2 === 0) drawShip(ctx, gs.px, gs.py, gs.tick)
 
     gs.particles.forEach(p => {
@@ -131,8 +227,14 @@ export function useGame() {
     ctx.font = 'bold 14px monospace'
     ctx.fillStyle = '#818cf8'; ctx.shadowColor = '#6366f1'; ctx.shadowBlur = 8
     ctx.fillText(`SCORE  ${gs.score}`, 14, 24)
-    ctx.fillStyle = '#22d3ee'; ctx.shadowColor = '#22d3ee'; ctx.textAlign = 'center'
-    ctx.fillText(`OLA  ${gs.wave}`, CW / 2, 24)
+    if (gs.phase === 'boss') {
+      ctx.fillStyle = '#f87171'; ctx.shadowColor = '#f87171'; ctx.textAlign = 'center'
+      ctx.font = 'bold 15px monospace'
+      ctx.fillText(`⚠ BOSS ⚠`, CW / 2, 24)
+    } else {
+      ctx.fillStyle = '#22d3ee'; ctx.shadowColor = '#22d3ee'; ctx.textAlign = 'center'
+      ctx.fillText(`OLA  ${gs.wave}`, CW / 2, 24)
+    }
     ctx.fillStyle = '#f87171'; ctx.shadowColor = '#f87171'; ctx.textAlign = 'right'
     ctx.fillText('♥'.repeat(gs.lives), CW - 14, 24)
     ctx.restore()

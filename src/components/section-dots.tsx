@@ -1,26 +1,12 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState } from 'react'
 import { useScrollProgress } from '@/hooks/use-scroll-progress'
-
-const sections = [
-  { id: 'home',     label: 'Inicio' },
-  { id: 'about',    label: 'Sobre Mí' },
-  { id: 'skills',   label: 'Habilidades' },
-  { id: 'projects', label: 'Proyectos' },
-  { id: 'chat',     label: 'Chat' },
-  { id: 'contact',  label: 'Contacto' },
-  { id: 'game',     label: '¿Aburrido?' },
-]
+import { useSectionDots } from '@/hooks/use-section-dots'
 
 export function SectionDots() {
   const { activeSection } = useScrollProgress()
-  const [hovered, setHovered] = useState<string | null>(null)
-
-  const scrollTo = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  const { sections, hovered, setHovered, scrollTo } = useSectionDots()
 
   return (
     <div className="fixed right-5 top-1/2 -translate-y-1/2 z-40 hidden lg:flex flex-col gap-3.5">
